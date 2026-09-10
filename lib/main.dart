@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_windowmanager/flutter_windowmanager.dart';
+import 'package:screen_protector/screen_protector.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 100% Privacy - Screen Recording & Screenshot Black Screen Block
   try {
-    await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
+    await ScreenProtector.preventScreenshotOn();
   } catch (e) {
     debugPrint("Security flag setup: $e");
   }
@@ -38,24 +38,15 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
-  int userGems = 8100; // Base: ₹100 = 8100 gems
-  bool isFemale = true; // Gender control for streaming
-  bool isVip = false;
 
-  final List<Widget> _screens = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _screens.addAll([
-      const HomeScreenContent(),
-      const FollowingListContent(),
-      const AudioPartyContent(),
-      const DailyRewardsAndVipTree(),
-      const ProfileAndWalletContent(),
-      const SuperBossAdminAnalytics(),
-    ]);
-  }
+  final List<Widget> _screens = const [
+    HomeScreenContent(),
+    FollowingListContent(),
+    AudioPartyContent(),
+    DailyRewardsAndVipTree(),
+    ProfileAndWalletContent(),
+    SuperBossAdminAnalytics(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +54,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: Stack(
         children: [
           _screens[_currentIndex],
-          // Floating Corner Dynamic Ad
           Positioned(
             bottom: 90,
             right: 15,
@@ -106,7 +96,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// 1. Home Screen: Live Streams & Active Users
 class HomeScreenContent extends StatelessWidget {
   const HomeScreenContent({super.key});
 
@@ -203,7 +192,6 @@ class HomeScreenContent extends StatelessWidget {
   }
 }
 
-// 2. Following List Content
 class FollowingListContent extends StatelessWidget {
   const FollowingListContent({super.key});
 
@@ -232,7 +220,6 @@ class FollowingListContent extends StatelessWidget {
   }
 }
 
-// 3. Audio Party Room (Free 4-5 participants)
 class AudioPartyContent extends StatelessWidget {
   const AudioPartyContent({super.key});
 
@@ -280,7 +267,6 @@ class AudioPartyContent extends StatelessWidget {
   }
 }
 
-// 4. Daily Rewards (7 Days) & VIP Tree Reward Chart
 class DailyRewardsAndVipTree extends StatelessWidget {
   const DailyRewardsAndVipTree({super.key});
 
@@ -346,7 +332,6 @@ class DailyRewardsAndVipTree extends StatelessWidget {
   }
 }
 
-// 5. Profile & In-App Payout Vault
 class ProfileAndWalletContent extends StatelessWidget {
   const ProfileAndWalletContent({super.key});
 
@@ -385,7 +370,6 @@ class ProfileAndWalletContent extends StatelessWidget {
   }
 }
 
-// 6, 7, 8: Super Boss Admin Control, Ghost Mode & Analytics
 class SuperBossAdminAnalytics extends StatelessWidget {
   const SuperBossAdminAnalytics({super.key});
 
@@ -397,13 +381,10 @@ class SuperBossAdminAnalytics extends StatelessWidget {
         children: [
           const Text("Super Boss Control & Analytics", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.redAccent)),
           const SizedBox(height: 15),
-          // Row 6: App Total Statistics
           _cardRow("Row 6: App Total Statistics", "Active Users: 1,420\nTop Revenue Source: 1-on-1 Video Calls\nTotal Streams Running: 18"),
           const SizedBox(height: 10),
-          // Row 7: Top 3 Leaderboard
           _cardRow("Row 7: Top 3 Leaderboard", "1. Streamer Maya - ₹24,000 Generated\n2. Streamer Priya - ₹18,500 Generated\n3. Streamer Ananya - ₹12,000 Generated"),
           const SizedBox(height: 10),
-          // Row 8: Virtual Salary Vault
           _cardRow("Row 8: Admin Virtual Salary Vault", "Today Net Income: ₹8,450\nAccumulated Vault: ₹65,200\nWithdrawal Charge: Flat ₹3 (IMPS)"),
           const SizedBox(height: 15),
           ElevatedButton.icon(
@@ -434,4 +415,3 @@ class SuperBossAdminAnalytics extends StatelessWidget {
     );
   }
 }
-
