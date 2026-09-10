@@ -14,11 +14,15 @@ dependencies:
   shared_preferences: ^2.2.3
   cached_network_image: ^3.3.1
   lottie: ^3.1.2
-  zego_uikit_prebuilt_call: any
-  zego_uikit_prebuilt_live_streaming: any
+  zego_uikit_prebuilt_call: ^4.15.0
+  zego_uikit_prebuilt_live_streaming: ^3.11.0
   local_auth: ^2.2.0
   device_info_plus: ^10.1.0
   google_mobile_ads: ^5.1.0
+
+dependency_overrides:
+  audioplayers: ^6.0.0
+  audioplayers_android: ^1.1.1
 
 flutter:
   uses-material-design: true
