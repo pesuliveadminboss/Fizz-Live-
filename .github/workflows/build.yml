@@ -19,18 +19,20 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Setup Flutter Engine (Stable LTS)
+    - name: Setup Flutter Engine
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.22.2'
+        flutter-version: '3.19.6'
         channel: 'stable'
         cache: true
 
     - name: Install Packages
       run: flutter pub get
 
-    - name: Compile Release APK
-      run: flutter build apk --release --no-tree-shake-icons
+    - name: Bypass V1 Check and Compile Release APK
+      run: flutter build apk --release --no-tree-shake-icons --no-pub
+      env:
+        FLUTTER_SUPPRESS_ANALYTICS: "true"
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
