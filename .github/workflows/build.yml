@@ -28,8 +28,11 @@ jobs:
     - name: Install Packages
       run: flutter pub get
 
-    - name: Compile Release APK
-      run: flutter build apk --release --no-tree-shake-icons
+    - name: Direct Android Gradle Build
+      run: |
+        cd android
+        chmod +x gradlew
+        ./gradlew assembleRelease
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
