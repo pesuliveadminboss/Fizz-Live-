@@ -25,14 +25,14 @@ jobs:
         channel: 'stable'
         cache: true
 
+    - name: Recreate Android Project Files
+      run: flutter create . --platforms=android --org com.fizzlive.app
+
     - name: Install Packages
       run: flutter pub get
 
-    - name: Direct Android Gradle Build
-      run: |
-        cd android
-        chmod +x gradlew
-        ./gradlew assembleRelease
+    - name: Compile Release APK
+      run: flutter build apk --release --no-tree-shake-icons
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
