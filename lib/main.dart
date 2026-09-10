@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:screen_protector/screen_protector.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // 100% Privacy - Screen Recording & Screenshot Black Screen Block
-  try {
-    await ScreenProtector.preventScreenshotOn();
-  } catch (e) {
-    debugPrint("Security flag setup: $e");
-  }
   runApp(const FizzLiveApp());
 }
 
