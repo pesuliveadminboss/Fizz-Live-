@@ -25,8 +25,16 @@ jobs:
         channel: 'stable'
         cache: true
 
-    - name: Recreate Android Project Files
-      run: flutter create . --platforms=android --org com.fizzlive.app
+    - name: Recreate Clean Android Structure
+      run: |
+        rm -rf android
+        flutter create . --platforms=android --org com.fizzlive.app
+
+    - name: Configure Gradle Compatibility
+      run: |
+        echo "android.useAndroidX=true" >> android/gradle.properties
+        echo "android.enableJetifier=true" >> android/gradle.properties
+        echo "org.gradle.jvmargs=-Xmx4G" >> android/gradle.properties
 
     - name: Install Packages
       run: flutter pub get
