@@ -19,10 +19,9 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Setup Flutter Engine
+    - name: Setup Latest Flutter Engine
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.19.6'
         channel: 'stable'
         cache: true
 
