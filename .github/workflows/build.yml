@@ -19,20 +19,17 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Setup Flutter Engine
+    - name: Setup Latest Flutter Engine
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.19.6'
         channel: 'stable'
+        cache: true
 
     - name: Install Packages
       run: flutter pub get
 
-    - name: Build Direct Gradle Release APK
-      run: |
-        cd android
-        chmod +x gradlew
-        ./gradlew assembleRelease -Ptarget=lib/main.dart
+    - name: Compile Release APK
+      run: flutter build apk --release --no-tree-shake-icons
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
