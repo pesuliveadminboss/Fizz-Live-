@@ -31,12 +31,14 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Fix AGP and Maven Repositories
+    - name: Fix AGP and MinSDK
       run: |
         echo "android.useAndroidX=true" >> android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
         echo "org.gradle.jvmargs=-Xmx4G" >> android/gradle.properties
         echo "android.newDsl=false" >> android/gradle.properties
+        sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 22/g' android/app/build.gradle || true
+        sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 22/g' android/app/build.gradle || true
 
     - name: Install Packages
       run: flutter pub get
