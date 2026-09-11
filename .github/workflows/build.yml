@@ -31,7 +31,7 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Force Fix Android Settings & Kotlin 1.9.24
+    - name: Configure Exact Android & Kotlin Plugins
       run: |
         echo "android.useAndroidX=true" >> android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -39,17 +39,43 @@ jobs:
         echo "android.newDsl=false" >> android/gradle.properties
         echo "flutter.minSdkVersion=22" >> android/local.properties
 
-        # Force MinSDK 22 across all gradle files
+        # Universal replacement strictly for minSdkVersion
         find android -name "build.gradle*" -exec sed -i 's/flutter.minSdkVersion/22/g' {} +
         find android -name "build.gradle*" -exec sed -i 's/minSdk = [0-9]*/minSdk = 22/g' {} +
         find android -name "build.gradle*" -exec sed -i 's/minSdkVersion = [0-9]*/minSdkVersion 22/g' {} +
 
-        # Force Kotlin 1.9.24 in settings.gradle / settings.gradle.kts
-        find android -name "settings.gradle*" -exec sed -i 's/version "[0-9.]*"/version "1.9.24"/g' {} +
-        find android -name "build.gradle*" -exec sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.24"/g' {} +
+        # Overwrite settings.gradle with valid AGP 8.3.2 and Kotlin 1.9.24
+        cat << 'EOF' > android/settings.gradle
+        pluginManagement {
+            def flutterSdkPath = {
+                def properties = new Properties()
+                file("local.properties").withInputStream { properties.load(it) }
+                def flutterSdkPath = properties.getProperty("flutter.sdk")
+                assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+                return flutterSdkPath
+            }()
 
-        # Strip duplicate legacy kotlin modules
-        cat << 'EOF' >> android/app/build.gradle
+            includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+
+        plugins {
+            id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+            id "com.android.application" version "8.3.2" apply false
+            id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+        }
+
+        include ":app"
+        EOF
+
+        # Strip duplicate legacy kotlin modules from app gradle
+        TARGET_BUILD_FILE=$(find android/app -name "build.gradle*" | head -n 1)
+        cat << 'EOF' >> "$TARGET_BUILD_FILE"
 
         configurations.all {
             exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
