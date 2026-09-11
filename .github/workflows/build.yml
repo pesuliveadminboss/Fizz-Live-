@@ -28,14 +28,13 @@ jobs:
     - name: Recreate Clean Android Structure
       run: |
         rm -rf android
-        flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app -a java
+        flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Configure Android Build Environment
+    - name: Force Groovy Gradle Configuration
       run: |
         echo "android.useAndroidX=true" >> android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
         echo "org.gradle.jvmargs=-Xmx4G" >> android/gradle.properties
-        echo "android.newDsl=false" >> android/gradle.properties
         echo "flutter.minSdkVersion=22" >> android/local.properties
         echo "flutter.targetSdkVersion=34" >> android/local.properties
         echo "flutter.compileSdkVersion=34" >> android/local.properties
@@ -43,23 +42,11 @@ jobs:
         # Upgrade Gradle Wrapper to 8.4
         sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.4-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
 
-        # Set compileSdk, targetSdk to 34 and minSdk to 22
-        python3 -c "
-        import glob, re
-        for fpath in glob.glob('android/**/*.gradle*', recursive=True):
-            with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
-                c = f.read()
-            c = re.sub(r'compileSdk(Version)?\s*=?\s*[0-9]+', 'compileSdkVersion 34', c)
-            c = re.sub(r'targetSdk(Version)?\s*=?\s*[0-9]+', 'targetSdkVersion 34', c)
-            c = re.sub(r'minSdk(Version)?\s*=?\s*[0-9]+', 'minSdkVersion 22', c)
-            c = c.replace('flutter.minSdkVersion', '22')
-            c = c.replace('flutter.compileSdkVersion', '34')
-            c = c.replace('flutter.targetSdkVersion', '34')
-            with open(fpath, 'w', encoding='utf-8') as f:
-                f.write(c)
-        "
+        # Remove Kotlin DSL to prevent AGP 9 triggers
+        rm -f android/settings.gradle.kts
+        rm -f android/app/build.gradle.kts
 
-        # Safe settings.gradle with AGP 8.3.2 and Kotlin 1.9.24
+        # Standard Settings Gradle
         cat << 'EOF' > android/settings.gradle
         pluginManagement {
             def flutterSdkPath = {
@@ -88,9 +75,47 @@ jobs:
         include ":app"
         EOF
 
-        # Disable verifyReleaseResources and strip legacy kotlin modules
-        TARGET_BUILD_FILE=$(find android/app -name "build.gradle*" | head -n 1)
-        cat << 'EOF' >> "$TARGET_BUILD_FILE"
+        # Standard Groovy App build.gradle
+        cat << 'EOF' > android/app/build.gradle
+        plugins {
+            id "com.android.application"
+            id "kotlin-android"
+            id "dev.flutter.flutter-gradle-plugin"
+        }
+
+        android {
+            namespace "com.fizzlive.app"
+            compileSdk 34
+
+            defaultConfig {
+                applicationId "com.fizzlive.app"
+                minSdk 22
+                targetSdk 34
+                versionCode 1
+                versionName "1.0"
+            }
+
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+
+            kotlinOptions {
+                jvmTarget = '17'
+            }
+
+            buildTypes {
+                release {
+                    signingConfig signingConfigs.debug
+                    minifyEnabled false
+                    shrinkResources false
+                }
+            }
+        }
+
+        flutter {
+            source '../..'
+        }
 
         configurations.all {
             exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
