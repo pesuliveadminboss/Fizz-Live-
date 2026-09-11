@@ -1,5 +1,5 @@
 name: fizz_live
-description: Fizz Live Chat and Stream Application
+description: Fizz Live Streaming and Two-Way Translation Video App
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -14,6 +14,7 @@ dependencies:
   shared_preferences: ^2.2.3
   cached_network_image: ^3.3.1
   lottie: ^3.1.2
+  translator: ^1.0.3
   zego_uikit_prebuilt_call: any
   zego_uikit_prebuilt_live_streaming: any
 
