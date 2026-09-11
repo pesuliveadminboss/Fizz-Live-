@@ -30,7 +30,7 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Configure MultiDex, Android & Safe Activity
+    - name: Configure MultiDex, Android & Safe Packaging
       run: |
         echo "android.useAndroidX=true" > android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -76,7 +76,7 @@ jobs:
         include ":app"
         EOF
 
-        # Standard app/build.gradle with MultiDex Enabled
+        # Standard app/build.gradle with MultiDex and packaging options
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
@@ -166,6 +166,9 @@ jobs:
 
     - name: Install Packages
       run: flutter pub get
+
+    - name: Generate App Launcher Icons
+      run: dart run flutter_launcher_icons
 
     - name: Compile Universal Debug APK
       run: flutter build apk --debug
