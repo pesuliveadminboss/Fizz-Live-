@@ -117,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton.icon(
               onPressed: () => _startLive(isHost: true),
               icon: const Icon(Icons.broadcast_on_home, color: Colors.white),
-              label: const Text('Go Live (Host)', style: TextStyle(color: Colors.white)),
+              label: const Text('Go Live (Host)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF7675),
                 minimumSize: const Size(double.infinity, 50),
@@ -128,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
             OutlinedButton.icon(
               onPressed: () => _startLive(isHost: false),
               icon: const Icon(Icons.login, color: Colors.white),
-              label: const Text('Watch Live (Audience)', style: TextStyle(color: Colors.white)),
+              label: const Text('Watch Live (Audience)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
                 side: const BorderSide(color: Color(0xFF6C5CE7)),
@@ -158,9 +158,9 @@ class LiveStreamingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Demo App Credentials
-    const int appID = 1234567890;
-    const String appSign = "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
+    // Verified Official Zego Credentials
+    const int appID = 1265895941;
+    const String appSign = "0d5b622565bfc6cbaf590722eb3b661ff27e0eb3666040b6b7e5bfcfe161d44e";
 
     return SafeArea(
       child: ZegoUIKitPrebuiltLiveStreaming(
