@@ -30,7 +30,7 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Align Gradle, AGP, Kotlin and CompileSDK 35
+    - name: Configure Permissions and Build Files
       run: |
         echo "android.useAndroidX=true" > android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -76,7 +76,7 @@ jobs:
         include ":app"
         EOF
 
-        # Standard app/build.gradle with compileSdk 35
+        # Standard app/build.gradle
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
@@ -141,16 +141,16 @@ jobs:
         }
         EOF
 
-    - name: Install Packages & Prepare Bundle
-      run: |
-        flutter pub get
-        flutter build bundle
+        # Inject Live Streaming Hardware Permissions into AndroidManifest
+        MANIFEST="android/app/src/main/AndroidManifest.xml"
+        PERMS="    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.CAMERA\"/>\n    <uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>\n    <uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>\n    <uses-permission android:name=\"android.permission.BLUETOOTH\"/>\n    <uses-permission android:name=\"android.permission.BLUETOOTH_CONNECT\"/>"
+        sed -i "/<manifest/a $PERMS" "$MANIFEST"
 
-    - name: Compile Release APK Directly via Gradle
-      run: |
-        cd android
-        chmod +x gradlew
-        ./gradlew assembleRelease -Pandroid-skip-build-dependency-validation -Dorg.gradle.project.android-skip-build-dependency-validation=true --no-daemon
+    - name: Install Packages
+      run: flutter pub get
+
+    - name: Compile Complete Release APK
+      run: flutter build apk --release --no-tree-shake-icons
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
