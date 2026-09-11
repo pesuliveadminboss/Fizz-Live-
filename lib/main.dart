@@ -35,7 +35,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _liveIdController = TextEditingController(text: "1234");
+  final TextEditingController _liveIdController = TextEditingController(text: "7777");
   late final String _userId;
   late final String _userName;
 
@@ -158,9 +158,22 @@ class LiveStreamingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Verified Official Zego Credentials
     const int appID = 1265895941;
     const String appSign = "0d5b622565bfc6cbaf590722eb3b661ff27e0eb3666040b6b7e5bfcfe161d44e";
+
+    final config = isHost
+        ? ZegoUIKitPrebuiltLiveStreamingConfig.host()
+        : ZegoUIKitPrebuiltLiveStreamingConfig.audience();
+
+    // Co-host & Bottom Bar Settings
+    if (!isHost) {
+      // Audience-க்கு கீழே Request Co-host பட்டன் சேர்க்கப்படுகிறது
+      config.bottomMenuBarConfig.audienceButtons = [
+        ZegoMenuBarButtonName.coHostControlButton,
+        ZegoMenuBarButtonName.chatButton,
+        ZegoMenuBarButtonName.switchCameraButton,
+      ];
+    }
 
     return SafeArea(
       child: ZegoUIKitPrebuiltLiveStreaming(
@@ -169,10 +182,9 @@ class LiveStreamingPage extends StatelessWidget {
         userID: userID,
         userName: userName,
         liveID: liveID,
-        config: isHost
-            ? ZegoUIKitPrebuiltLiveStreamingConfig.host()
-            : ZegoUIKitPrebuiltLiveStreamingConfig.audience(),
+        config: config,
       ),
     );
   }
 }
+
