@@ -25,12 +25,12 @@ jobs:
         channel: 'stable'
         cache: true
 
-    - name: Recreate Clean Android Structure
+    - name: Recreate Clean Android Project
       run: |
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Setup Production Keystore, Theme & Universal Compatibility
+    - name: Setup Bulletproof Android Native Configuration
       run: |
         echo "android.useAndroidX=true" > android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -39,7 +39,7 @@ jobs:
         echo "flutter.targetSdkVersion=35" >> android/local.properties
         echo "flutter.compileSdkVersion=35" >> android/local.properties
 
-        # Generate Official Production Keystore for Universal Android Trust
+        # Generate Universal Keystore
         keytool -genkeypair -v -keystore android/app/fizz_release.jks \
           -storepass FizzLive2026Secure \
           -alias fizzlivekey \
@@ -47,13 +47,13 @@ jobs:
           -keyalg RSA \
           -keysize 2048 \
           -validity 10000 \
-          -dname "CN=Fizz Live, OU=Mobile, O=Fizz Technologies, L=Coimbatore, ST=Tamil Nadu, C=IN"
+          -dname "CN=Fizz Live, OU=App, O=Fizz, L=Coimbatore, ST=TN, C=IN"
 
-        # Upgrade Gradle Wrapper strictly to Gradle 8.14
+        # Upgrade Gradle Wrapper to 8.14
         sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.14-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
         sed -i 's/gradle-[0-9.]*-bin.zip/gradle-8.14-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
 
-        # Clean Kotlin DSL files
+        # Clean old build DSLs
         rm -f android/settings.gradle.kts
         rm -f android/app/build.gradle.kts
 
@@ -86,7 +86,7 @@ jobs:
         include ":app"
         EOF
 
-        # App build.gradle with Official V1 & V2 Signing Config
+        # Robust app/build.gradle with Proguard & MultiDex
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
@@ -154,6 +154,9 @@ jobs:
                     minifyEnabled false
                     shrinkResources false
                 }
+                debug {
+                    signingConfig signingConfigs.release
+                }
             }
         }
 
@@ -178,21 +181,56 @@ jobs:
         }
         EOF
 
-        # Inject necessary hardware permissions
-        MANIFEST="android/app/src/main/AndroidManifest.xml"
-        PERMS="    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.CAMERA\"/>\n    <uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>\n    <uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>\n    <uses-permission android:name=\"android.permission.BLUETOOTH\"/>\n    <uses-permission android:name=\"android.permission.BLUETOOTH_CONNECT\"/>"
-        sed -i "/<manifest/a $PERMS" "$MANIFEST"
+        # Write Guaranteed Crash-Proof AndroidManifest.xml
+        cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            package="com.fizzlive.app">
 
-        # Theme Configuration for Android compatibility
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <uses-permission android:name="android.permission.CAMERA"/>
+            <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+            <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+            <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+            <uses-permission android:name="android.permission.BLUETOOTH"/>
+            <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+
+            <application
+                android:label="Fizz Live"
+                android:name="androidx.multidex.MultiDexApplication"
+                android:icon="@mipmap/launcher_icon"
+                android:theme="@style/NormalTheme"
+                android:hardwareAccelerated="true">
+
+                <activity
+                    android:name="io.flutter.embedding.android.FlutterActivity"
+                    android:exported="true"
+                    android:launchMode="singleTop"
+                    android:theme="@style/NormalTheme"
+                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                    android:hardwareAccelerated="true"
+                    android:windowSoftInputMode="adjustResize">
+                    
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN"/>
+                        <category android:name="android.intent.category.LAUNCHER"/>
+                    </intent-filter>
+                </activity>
+                
+                <meta-data
+                    android:name="flutterEmbedding"
+                    android:value="2" />
+            </application>
+        </manifest>
+        EOF
+
+        # Setup Clean Theme in res/values/styles.xml
         mkdir -p android/app/src/main/res/values
         cat << 'EOF' > android/app/src/main/res/values/styles.xml
         <?xml version="1.0" encoding="utf-8"?>
         <resources>
-            <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
-                <item name="android:windowBackground">@drawable/launch_background</item>
-            </style>
             <style name="NormalTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-                <item name="android:windowBackground">?android:colorBackground</item>
+                <item name="android:windowBackground">@android:color/black</item>
             </style>
         </resources>
         EOF
@@ -209,6 +247,6 @@ jobs:
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
       with:
-        name: FizzLive-Official-Signed-APK
+        name: FizzLive-Final-APK
         path: build/app/outputs/flutter-apk/app-release.apk
         
