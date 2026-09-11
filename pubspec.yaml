@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  zego_uikit_prebuilt_live_streaming: ^3.3.15
+  zego_uikit_prebuilt_live_streaming: ^3.15.6
   shared_preferences: ^2.2.2
   cupertino_icons: ^1.0.6
 
@@ -17,14 +17,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.13.1
-
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/icon.png"
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/icon.png
+  
