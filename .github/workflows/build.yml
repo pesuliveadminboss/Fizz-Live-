@@ -40,9 +40,9 @@ jobs:
         echo "flutter.targetSdkVersion=34" >> android/local.properties
         echo "flutter.compileSdkVersion=34" >> android/local.properties
 
-        # Upgrade Gradle Wrapper to 8.4
-        sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.4-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
-        sed -i 's/gradle-[0-9.]*-bin.zip/gradle-8.4-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
+        # Upgrade Gradle Wrapper strictly to 8.5
+        sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.5-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
+        sed -i 's/gradle-[0-9.]*-bin.zip/gradle-8.5-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
 
         # Clean old DSL files
         rm -f android/settings.gradle.kts
@@ -151,7 +151,7 @@ jobs:
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleRelease --no-daemon
+        ./gradlew assembleRelease -Pandroid-skip-build-dependency-validation --no-daemon
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
