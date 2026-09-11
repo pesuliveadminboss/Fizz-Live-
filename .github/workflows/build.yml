@@ -30,7 +30,7 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Configure Android, Permissions and Packaging
+    - name: Configure MultiDex, Android & Safe Activity
       run: |
         echo "android.useAndroidX=true" > android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -76,7 +76,7 @@ jobs:
         include ":app"
         EOF
 
-        # Standard app/build.gradle with packagingOptions to keep C++ native libs
+        # Standard app/build.gradle with MultiDex Enabled
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
@@ -105,6 +105,7 @@ jobs:
                 targetSdk 35
                 versionCode flutterVersionCode.toInteger()
                 versionName flutterVersionName
+                multiDexEnabled true
                 ndk {
                     abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
                 }
@@ -136,6 +137,10 @@ jobs:
                     signingConfig signingConfigs.debug
                 }
             }
+        }
+
+        dependencies {
+            implementation 'androidx.multidex:multidex:2.0.1'
         }
 
         flutter {
