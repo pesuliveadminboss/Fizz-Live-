@@ -31,7 +31,7 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Force MinSDK 22 and Kotlin 1.9.24
+    - name: Force Fix Android Settings & Kotlin 1.9.24
       run: |
         echo "android.useAndroidX=true" >> android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -39,38 +39,17 @@ jobs:
         echo "android.newDsl=false" >> android/gradle.properties
         echo "flutter.minSdkVersion=22" >> android/local.properties
 
-        # Universal MinSDK 22 replace
-        python3 -c "
-        import glob
-        for fpath in glob.glob('android/**/*.gradle*', recursive=True):
-            with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
-                c = f.read()
-            c = c.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 22')
-            c = c.replace('minSdkVersion = flutter.minSdkVersion', 'minSdkVersion = 22')
-            c = c.replace('flutter.minSdkVersion', '22')
-            c = c.replace('minSdk = flutter.minSdkVersion', 'minSdk = 22')
-            with open(fpath, 'w', encoding='utf-8') as f:
-                f.write(c)
-        "
+        # Force MinSDK 22 across all gradle files
+        find android -name "build.gradle*" -exec sed -i 's/flutter.minSdkVersion/22/g' {} +
+        find android -name "build.gradle*" -exec sed -i 's/minSdk = [0-9]*/minSdk = 22/g' {} +
+        find android -name "build.gradle*" -exec sed -i 's/minSdkVersion = [0-9]*/minSdkVersion 22/g' {} +
 
-        # Universal Kotlin Version Bump to 1.9.24 across settings and build files
-        python3 -c "
-        import glob
-        for fpath in glob.glob('android/**/*', recursive=True):
-            if any(fpath.endswith(ext) for ext in ['.gradle', '.kts', '.properties']):
-                try:
-                    with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
-                        c = f.read()
-                    c = c.replace('1.7.10', '1.9.24').replace('1.8.22', '1.9.24').replace('1.9.0', '1.9.24')
-                    with open(fpath, 'w', encoding='utf-8') as f:
-                        f.write(c)
-                except Exception:
-                    pass
-        "
+        # Force Kotlin 1.9.24 in settings.gradle / settings.gradle.kts
+        find android -name "settings.gradle*" -exec sed -i 's/version "[0-9.]*"/version "1.9.24"/g' {} +
+        find android -name "build.gradle*" -exec sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.24"/g' {} +
 
-        # Exclude duplicate legacy kotlin modules
-        TARGET_BUILD_FILE=$(find android/app -name "build.gradle*" | head -n 1)
-        cat << 'EOF' >> "$TARGET_BUILD_FILE"
+        # Strip duplicate legacy kotlin modules
+        cat << 'EOF' >> android/app/build.gradle
 
         configurations.all {
             exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
