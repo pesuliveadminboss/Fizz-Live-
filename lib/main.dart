@@ -70,6 +70,58 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
     );
   }
 
+  // Livmet Style Random Match Feature
+  void _startQuickMatch() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xFF1B143A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(28.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 60,
+                height: 60,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF2D75)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                "Finding Match...",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Connecting you to live streamers worldwide",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.white60),
+              ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel", style: TextStyle(color: Colors.white38)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Auto connects after 2 seconds to popular active room
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        Navigator.pop(context); // Close finding dialog
+        _joinLive("7777", false); // Connects to main room
+      }
+    });
+  }
+
   void _showGoLiveSheet() {
     final TextEditingController roomController = TextEditingController(text: "7777");
     showModalBottomSheet(
@@ -149,6 +201,58 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
       ),
       body: CustomScrollView(
         slivers: [
+          // Quick Match Banner
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF2D75), Color(0xFF8A2BE2)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFFFF2D75).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6)),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Random Video Chat", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                          SizedBox(height: 4),
+                          Text("Match with random hosts instantly!", style: TextStyle(fontSize: 12, color: Colors.white70)),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: _startQuickMatch,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFFFF2D75),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.bolt, size: 18),
+                          SizedBox(width: 4),
+                          Text("Match", style: TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Story Avatars
           SliverToBoxAdapter(
             child: SizedBox(
               height: 105,
@@ -182,6 +286,7 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
               ),
             ),
           ),
+
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, 10, 16, 12),
@@ -194,6 +299,8 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
               ),
             ),
           ),
+
+          // Stream Cards Grid
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             sliver: SliverGrid(
@@ -280,6 +387,7 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 90)),
         ],
       ),
+
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: GestureDetector(
         onTap: _showGoLiveSheet,
@@ -298,6 +406,7 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
           child: const Icon(Icons.video_call, size: 34, color: Colors.white),
         ),
       ),
+
       bottomNavigationBar: BottomAppBar(
         color: const Color(0xFF161228),
         shape: const CircularNotchedRectangle(),
@@ -359,7 +468,6 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       return _translatedMessages[text]!;
     }
     try {
-      // Auto-detects language: if Tamil translates to English, else translates to Tamil
       final translation = await _translator.translate(text, to: text.contains(RegExp(r'[\u0B80-\u0BFF]')) ? 'en' : 'ta');
       _translatedMessages[text] = translation.text;
       return translation.text;
@@ -385,7 +493,6 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       ];
     }
 
-    // Realtime Auto-Translating Chat Bubble
     config.inRoomMessageConfig.itemBuilder = (context, message, extraInfo) {
       return FutureBuilder<String>(
         future: _translateText(message.message),
@@ -404,54 +511,4 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  message.user.name,
-                  style: const TextStyle(
-                    color: Color(0xFFFF7675),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  message.message,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-                if (translated != null && translated != message.message) ...[
-                  const SizedBox(height: 3),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.translate, size: 12, color: Color(0xFFA29BFE)),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          translated,
-                          style: const TextStyle(
-                            color: Color(0xFFA29BFE),
-                            fontSize: 12,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          );
-        },
-      );
-    };
-
-    return SafeArea(
-      child: ZegoUIKitPrebuiltLiveStreaming(
-        appID: appID,
-        appSign: appSign,
-        userID: widget.userID,
-        userName: widget.userName,
-        liveID: widget.liveID,
-        config: config,
-      ),
-    );
-  }
-}
+                  mes
