@@ -70,7 +70,6 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
     );
   }
 
-  // Livmet Style Random Match Feature
   void _startQuickMatch() {
     showDialog(
       context: context,
@@ -113,11 +112,10 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
       ),
     );
 
-    // Auto connects after 2 seconds to popular active room
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
-        Navigator.pop(context); // Close finding dialog
-        _joinLive("7777", false); // Connects to main room
+        Navigator.pop(context);
+        _joinLive("7777", false);
       }
     });
   }
@@ -201,7 +199,6 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
       ),
       body: CustomScrollView(
         slivers: [
-          // Quick Match Banner
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -251,8 +248,6 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
               ),
             ),
           ),
-
-          // Story Avatars
           SliverToBoxAdapter(
             child: SizedBox(
               height: 105,
@@ -286,7 +281,6 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
               ),
             ),
           ),
-
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, 10, 16, 12),
@@ -299,8 +293,6 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
               ),
             ),
           ),
-
-          // Stream Cards Grid
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             sliver: SliverGrid(
@@ -387,7 +379,6 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 90)),
         ],
       ),
-
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: GestureDetector(
         onTap: _showGoLiveSheet,
@@ -406,7 +397,6 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
           child: const Icon(Icons.video_call, size: 34, color: Colors.white),
         ),
       ),
-
       bottomNavigationBar: BottomAppBar(
         color: const Color(0xFF161228),
         shape: const CircularNotchedRectangle(),
@@ -441,7 +431,7 @@ class _LivmetHomeScreenState extends State<LivmetHomeScreen> {
   }
 }
 
-class LiveStreamingPage extends StatefulWidget {
+class LiveStreamingPage extends StatelessWidget {
   final String liveID;
   final String userID;
   final String userName;
@@ -456,36 +446,15 @@ class LiveStreamingPage extends StatefulWidget {
   });
 
   @override
-  State<LiveStreamingPage> createState() => _LiveStreamingPageState();
-}
-
-class _LiveStreamingPageState extends State<LiveStreamingPage> {
-  final GoogleTranslator _translator = GoogleTranslator();
-  final Map<String, String> _translatedMessages = {};
-
-  Future<String> _translateText(String text) async {
-    if (_translatedMessages.containsKey(text)) {
-      return _translatedMessages[text]!;
-    }
-    try {
-      final translation = await _translator.translate(text, to: text.contains(RegExp(r'[\u0B80-\u0BFF]')) ? 'en' : 'ta');
-      _translatedMessages[text] = translation.text;
-      return translation.text;
-    } catch (_) {
-      return text;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     const int appID = 1265895941;
     const String appSign = "0d5b622565bfc6cbaf590722eb3b661ff27e0eb3666040b6b7e5bfcfe161d44e";
 
-    final config = widget.isHost
+    final config = isHost
         ? ZegoUIKitPrebuiltLiveStreamingConfig.host()
         : ZegoUIKitPrebuiltLiveStreamingConfig.audience();
 
-    if (!widget.isHost) {
+    if (!isHost) {
       config.bottomMenuBarConfig.audienceButtons = [
         ZegoMenuBarButtonName.coHostControlButton,
         ZegoMenuBarButtonName.chatButton,
@@ -493,22 +462,15 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       ];
     }
 
-    config.inRoomMessageConfig.itemBuilder = (context, message, extraInfo) {
-      return FutureBuilder<String>(
-        future: _translateText(message.message),
-        builder: (context, snapshot) {
-          final translated = snapshot.data;
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.55),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  mes
+    return SafeArea(
+      child: ZegoUIKitPrebuiltLiveStreaming(
+        appID: appID,
+        appSign: appSign,
+        userID: userID,
+        userName: userName,
+        liveID: liveID,
+        config: config,
+      ),
+    );
+  }
+}
