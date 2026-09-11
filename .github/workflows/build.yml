@@ -31,7 +31,7 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Lock MinSDK to 22 and Fix Configs
+    - name: Configure Android Compatibility and Kotlin Fix
       run: |
         echo "android.useAndroidX=true" >> android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -40,6 +40,9 @@ jobs:
         echo "flutter.minSdkVersion=22" >> android/local.properties
         find android -name "build.gradle*" -exec sed -i 's/flutter.minSdkVersion/22/g' {} +
         find android -name "build.gradle*" -exec sed -i 's/minSdk = [0-9]*/minSdk = 22/g' {} +
+        
+        # Duplicate class kotlin-stdlib fix
+        echo 'configurations.all { resolutionStrategy { force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22" } }' >> android/app/build.gradle || true
 
     - name: Install Packages
       run: flutter pub get
