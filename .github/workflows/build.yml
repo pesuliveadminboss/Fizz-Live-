@@ -30,23 +30,26 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Force Groovy Gradle Configuration
+    - name: Setup Standard Android Config
       run: |
-        echo "android.useAndroidX=true" >> android/gradle.properties
+        # Set Opt-outs in Gradle Properties
+        echo "android.useAndroidX=true" > android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
         echo "org.gradle.jvmargs=-Xmx4G" >> android/gradle.properties
+        echo "android.newDsl=false" >> android/gradle.properties
         echo "flutter.minSdkVersion=22" >> android/local.properties
         echo "flutter.targetSdkVersion=34" >> android/local.properties
         echo "flutter.compileSdkVersion=34" >> android/local.properties
 
-        # Upgrade Gradle Wrapper to 8.4
+        # Upgrade Gradle Wrapper strictly to 8.4
         sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.4-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
+        sed -i 's/gradle-[0-9.]*-bin.zip/gradle-8.4-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
 
-        # Remove Kotlin DSL to prevent AGP 9 triggers
+        # Clean old DSL files if any
         rm -f android/settings.gradle.kts
         rm -f android/app/build.gradle.kts
 
-        # Standard Settings Gradle
+        # Stable settings.gradle
         cat << 'EOF' > android/settings.gradle
         pluginManagement {
             def flutterSdkPath = {
@@ -75,12 +78,30 @@ jobs:
         include ":app"
         EOF
 
-        # Standard Groovy App build.gradle
+        # Stable app/build.gradle
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
             id "kotlin-android"
             id "dev.flutter.flutter-gradle-plugin"
+        }
+
+        def localProperties = new Properties()
+        def localPropertiesFile = rootProject.file('local.properties')
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.withReader('UTF-8') { reader ->
+                localProperties.load(reader)
+            }
+        }
+
+        def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+        if (flutterVersionCode == null) {
+            flutterVersionCode = '1'
+        }
+
+        def flutterVersionName = localProperties.getProperty('flutter.versionName')
+        if (flutterVersionName == null) {
+            flutterVersionName = '1.0'
         }
 
         android {
@@ -91,8 +112,8 @@ jobs:
                 applicationId "com.fizzlive.app"
                 minSdk 22
                 targetSdk 34
-                versionCode 1
-                versionName "1.0"
+                versionCode flutterVersionCode.toInteger()
+                versionName flutterVersionName
             }
 
             compileOptions {
@@ -133,7 +154,7 @@ jobs:
       run: flutter pub get
 
     - name: Compile Release APK
-      run: flutter build apk --release --no-tree-shake-icons
+      run: flutter build apk --release --no-tree-shake-icons --dart-define=android.newDsl=false
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
