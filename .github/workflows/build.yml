@@ -39,9 +39,9 @@ jobs:
         echo "flutter.targetSdkVersion=34" >> android/local.properties
         echo "flutter.compileSdkVersion=34" >> android/local.properties
 
-        # Upgrade Gradle Wrapper strictly to Gradle 8.11.1
-        sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.11.1-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
-        sed -i 's/gradle-[0-9.]*-bin.zip/gradle-8.11.1-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
+        # Upgrade Gradle Wrapper strictly to Gradle 8.13
+        sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.13-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
+        sed -i 's/gradle-[0-9.]*-bin.zip/gradle-8.13-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
 
         # Clean old DSL files
         rm -f android/settings.gradle.kts
