@@ -30,7 +30,7 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Configure Permissions and Build Files
+    - name: Configure Android, Permissions and Packaging
       run: |
         echo "android.useAndroidX=true" > android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -47,7 +47,7 @@ jobs:
         rm -f android/settings.gradle.kts
         rm -f android/app/build.gradle.kts
 
-        # Standard settings.gradle with AGP 8.12.0 and Kotlin 2.2.20
+        # Standard settings.gradle
         cat << 'EOF' > android/settings.gradle
         pluginManagement {
             def flutterSdkPath = {
@@ -76,7 +76,7 @@ jobs:
         include ":app"
         EOF
 
-        # Standard app/build.gradle
+        # Standard app/build.gradle with packagingOptions to keep C++ native libs
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
@@ -105,6 +105,9 @@ jobs:
                 targetSdk 35
                 versionCode flutterVersionCode.toInteger()
                 versionName flutterVersionName
+                ndk {
+                    abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+                }
             }
 
             compileOptions {
@@ -116,11 +119,21 @@ jobs:
                 jvmTarget = '17'
             }
 
+            packagingOptions {
+                pickFirst 'lib/arm64-v8a/libc++_shared.so'
+                pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+                pickFirst 'lib/x86_64/libc++_shared.so'
+                pickFirst 'lib/x86/libc++_shared.so'
+            }
+
             buildTypes {
                 release {
                     signingConfig signingConfigs.debug
                     minifyEnabled false
                     shrinkResources false
+                }
+                debug {
+                    signingConfig signingConfigs.debug
                 }
             }
         }
@@ -141,7 +154,7 @@ jobs:
         }
         EOF
 
-        # Inject Live Streaming Hardware Permissions into AndroidManifest
+        # Inject permissions directly into AndroidManifest
         MANIFEST="android/app/src/main/AndroidManifest.xml"
         PERMS="    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.CAMERA\"/>\n    <uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>\n    <uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>\n    <uses-permission android:name=\"android.permission.BLUETOOTH\"/>\n    <uses-permission android:name=\"android.permission.BLUETOOTH_CONNECT\"/>"
         sed -i "/<manifest/a $PERMS" "$MANIFEST"
@@ -149,12 +162,12 @@ jobs:
     - name: Install Packages
       run: flutter pub get
 
-    - name: Compile Complete Release APK
-      run: flutter build apk --release --no-tree-shake-icons
+    - name: Compile Universal Debug APK
+      run: flutter build apk --debug
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
       with:
-        name: FizzLive-Release-APK
-        path: build/app/outputs/flutter-apk/app-release.apk
+        name: FizzLive-APK
+        path: build/app/outputs/flutter-apk/app-debug.apk
         
