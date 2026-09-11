@@ -30,7 +30,7 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Create Free Official Keystore & Safe Signing
+    - name: Setup Production Keystore, Theme & Universal Compatibility
       run: |
         echo "android.useAndroidX=true" > android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -39,14 +39,21 @@ jobs:
         echo "flutter.targetSdkVersion=35" >> android/local.properties
         echo "flutter.compileSdkVersion=35" >> android/local.properties
 
-        # Generate Free Official Release Keystore
-        keytool -genkeypair -v -keystore android/app/release.jks -storepass fizzlive123 -alias fizzlive -keypass fizzlive123 -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=FizzLive, OU=App, O=Fizz, L=Coimbatore, S=TN, C=IN"
+        # Generate Official Production Keystore for Universal Android Trust
+        keytool -genkeypair -v -keystore android/app/fizz_release.jks \
+          -storepass FizzLive2026Secure \
+          -alias fizzlivekey \
+          -keypass FizzLive2026Secure \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -dname "CN=Fizz Live, OU=Mobile, O=Fizz Technologies, L=Coimbatore, ST=Tamil Nadu, C=IN"
 
         # Upgrade Gradle Wrapper strictly to Gradle 8.14
         sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.14-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
         sed -i 's/gradle-[0-9.]*-bin.zip/gradle-8.14-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
 
-        # Clean old DSL files
+        # Clean Kotlin DSL files
         rm -f android/settings.gradle.kts
         rm -f android/app/build.gradle.kts
 
@@ -79,7 +86,7 @@ jobs:
         include ":app"
         EOF
 
-        # Standard app/build.gradle with Official Release Signing
+        # App build.gradle with Official V1 & V2 Signing Config
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
@@ -104,10 +111,12 @@ jobs:
 
             signingConfigs {
                 release {
-                    storeFile file('release.jks')
-                    storePassword 'fizzlive123'
-                    keyAlias 'fizzlive'
-                    keyPassword 'fizzlive123'
+                    storeFile file('fizz_release.jks')
+                    storePassword 'FizzLive2026Secure'
+                    keyAlias 'fizzlivekey'
+                    keyPassword 'FizzLive2026Secure'
+                    v1SigningEnabled true
+                    v2SigningEnabled true
                 }
             }
 
@@ -150,6 +159,7 @@ jobs:
 
         dependencies {
             implementation 'androidx.multidex:multidex:2.0.1'
+            implementation 'com.google.android.material:material:1.12.0'
         }
 
         flutter {
@@ -168,10 +178,24 @@ jobs:
         }
         EOF
 
-        # Inject permissions directly into AndroidManifest
+        # Inject necessary hardware permissions
         MANIFEST="android/app/src/main/AndroidManifest.xml"
         PERMS="    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.CAMERA\"/>\n    <uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>\n    <uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>\n    <uses-permission android:name=\"android.permission.BLUETOOTH\"/>\n    <uses-permission android:name=\"android.permission.BLUETOOTH_CONNECT\"/>"
         sed -i "/<manifest/a $PERMS" "$MANIFEST"
+
+        # Theme Configuration for Android compatibility
+        mkdir -p android/app/src/main/res/values
+        cat << 'EOF' > android/app/src/main/res/values/styles.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <resources>
+            <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+                <item name="android:windowBackground">@drawable/launch_background</item>
+            </style>
+            <style name="NormalTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+                <item name="android:windowBackground">?android:colorBackground</item>
+            </style>
+        </resources>
+        EOF
 
     - name: Install Packages
       run: flutter pub get
@@ -185,6 +209,6 @@ jobs:
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
       with:
-        name: FizzLive-Signed-Release-APK
+        name: FizzLive-Official-Signed-APK
         path: build/app/outputs/flutter-apk/app-release.apk
         
