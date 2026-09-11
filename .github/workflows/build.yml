@@ -2,258 +2,68 @@ name: Build and Release Fizz Live APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Setup Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Setup Flutter Engine Stable
-      uses: subosito/flutter-action@v2
-      with:
-        channel: 'stable'
-        cache: true
+      - name: Setup Flutter Engine Stable
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.6'
+          channel: 'stable'
 
-    - name: Recreate Clean Android Project
-      run: |
-        rm -rf android
-        flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
+      - name: Recreate Clean Android Project
+        run: |
+          rm -rf android
+          flutter create . --platforms=android --org com.fizzlive
 
-    - name: Setup Bulletproof Android Native Configuration
-      run: |
-        echo "android.useAndroidX=true" > android/gradle.properties
-        echo "android.enableJetifier=true" >> android/gradle.properties
-        echo "org.gradle.jvmargs=-Xmx4G" >> android/gradle.properties
-        echo "flutter.minSdkVersion=25" >> android/local.properties
-        echo "flutter.targetSdkVersion=35" >> android/local.properties
-        echo "flutter.compileSdkVersion=35" >> android/local.properties
+      - name: Setup Bulletproof Android Native Configuration
+        run: |
+          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle
+          sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle
 
-        # Generate Universal Keystore
-        keytool -genkeypair -v -keystore android/app/fizz_release.jks \
-          -storepass FizzLive2026Secure \
-          -alias fizzlivekey \
-          -keypass FizzLive2026Secure \
-          -keyalg RSA \
-          -keysize 2048 \
-          -validity 10000 \
-          -dname "CN=Fizz Live, OU=App, O=Fizz, L=Coimbatore, ST=TN, C=IN"
+      - name: Install Packages
+        run: flutter pub get
 
-        # Upgrade Gradle Wrapper to 8.14
-        sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.14-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
-        sed -i 's/gradle-[0-9.]*-bin.zip/gradle-8.14-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
+      - name: Ensure Dummy Asset If Missing
+        run: |
+          mkdir -p assets
+          if [ ! -f assets/icon.png ]; then
+            convert -size 512x512 xc:#FF2A6D assets/icon.png || touch assets/icon.png
+          fi
 
-        # Clean old build DSLs
-        rm -f android/settings.gradle.kts
-        rm -f android/app/build.gradle.kts
+      - name: Generate App Launcher Icons
+        run: dart run flutter_launcher_icons || true
 
-        # Standard settings.gradle
-        cat << 'EOF' > android/settings.gradle
-        pluginManagement {
-            def flutterSdkPath = {
-                def properties = new Properties()
-                file("local.properties").withInputStream { properties.load(it) }
-                def flutterSdkPath = properties.getProperty("flutter.sdk")
-                assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
-                return flutterSdkPath
-            }()
+      - name: Compile Official Signed Release APK
+        run: flutter build apk --release
 
-            includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+      - name: Rename APK for Distribution
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/FizzLive.apk
 
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
-
-        plugins {
-            id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-            id "com.android.application" version "8.12.0" apply false
-            id "org.jetbrains.kotlin.android" version "2.2.20" apply false
-        }
-
-        include ":app"
-        EOF
-
-        # Robust app/build.gradle
-        cat << 'EOF' > android/app/build.gradle
-        plugins {
-            id "com.android.application"
-            id "kotlin-android"
-            id "dev.flutter.flutter-gradle-plugin"
-        }
-
-        def localProperties = new Properties()
-        def localPropertiesFile = rootProject.file('local.properties')
-        if (localPropertiesFile.exists()) {
-            localPropertiesFile.withReader('UTF-8') { reader ->
-                localProperties.load(reader)
-            }
-        }
-
-        def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
-        def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
-
-        android {
-            namespace "com.fizzlive.app"
-            compileSdk 35
-
-            signingConfigs {
-                release {
-                    storeFile file('fizz_release.jks')
-                    storePassword 'FizzLive2026Secure'
-                    keyAlias 'fizzlivekey'
-                    keyPassword 'FizzLive2026Secure'
-                    v1SigningEnabled true
-                    v2SigningEnabled true
-                }
-            }
-
-            defaultConfig {
-                applicationId "com.fizzlive.app"
-                minSdk 25
-                targetSdk 35
-                versionCode flutterVersionCode.toInteger()
-                versionName flutterVersionName
-                multiDexEnabled true
-                ndk {
-                    abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
-                }
-            }
-
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_17
-                targetCompatibility JavaVersion.VERSION_17
-            }
-
-            kotlinOptions {
-                jvmTarget = '17'
-            }
-
-            packagingOptions {
-                pickFirst 'lib/arm64-v8a/libc++_shared.so'
-                pickFirst 'lib/armeabi-v7a/libc++_shared.so'
-                pickFirst 'lib/x86_64/libc++_shared.so'
-                pickFirst 'lib/x86/libc++_shared.so'
-            }
-
-            buildTypes {
-                release {
-                    signingConfig signingConfigs.release
-                    minifyEnabled false
-                    shrinkResources false
-                }
-            }
-        }
-
-        dependencies {
-            implementation 'androidx.multidex:multidex:2.0.1'
-            implementation 'com.google.android.material:material:1.12.0'
-        }
-
-        flutter {
-            source '../..'
-        }
-
-        configurations.all {
-            exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
-            exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
-        }
-
-        gradle.projectsEvaluated {
-            tasks.matching { it.name.contains("MinSdkCheck") || it.name.startsWith("verifyReleaseResources") }.all {
-                enabled = false
-            }
-        }
-        EOF
-
-        # AndroidManifest
-        cat << 'EOF' > android/app/src/main/AndroidManifest.xml
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-            package="com.fizzlive.app">
-
-            <uses-permission android:name="android.permission.INTERNET"/>
-            <uses-permission android:name="android.permission.CAMERA"/>
-            <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-            <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
-            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-            <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-            <uses-permission android:name="android.permission.BLUETOOTH"/>
-            <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
-
-            <application
-                android:label="Fizz Live"
-                android:name="androidx.multidex.MultiDexApplication"
-                android:icon="@mipmap/launcher_icon"
-                android:theme="@style/NormalTheme"
-                android:hardwareAccelerated="true">
-
-                <activity
-                    android:name="io.flutter.embedding.android.FlutterActivity"
-                    android:exported="true"
-                    android:launchMode="singleTop"
-                    android:theme="@style/NormalTheme"
-                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                    android:hardwareAccelerated="true"
-                    android:windowSoftInputMode="adjustResize">
-                    
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN"/>
-                        <category android:name="android.intent.category.LAUNCHER"/>
-                    </intent-filter>
-                </activity>
-                
-                <meta-data
-                    android:name="flutterEmbedding"
-                    android:value="2" />
-            </application>
-        </manifest>
-        EOF
-
-        # Clean Theme
-        mkdir -p android/app/src/main/res/values
-        cat << 'EOF' > android/app/src/main/res/values/styles.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <resources>
-            <style name="NormalTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-                <item name="android:windowBackground">@android:color/black</item>
-            </style>
-        </resources>
-        EOF
-
-    - name: Install Packages
-      run: flutter pub get
-
-    - name: Generate App Launcher Icons
-      run: dart run flutter_launcher_icons
-
-    - name: Compile Official Signed Release APK
-      run: flutter build apk --release --no-tree-shake-icons
-
-    - name: Rename APK for Distribution
-      run: cp build/app/outputs/flutter-apk/app-release.apk FizzLive.apk
-
-    - name: Publish Direct Public Download Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v1.0.0
-        name: "Fizz Live Official Release"
-        body: "Official Signed APK of Fizz Live. Download FizzLive.apk below and install directly."
-        files: FizzLive.apk
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+      - name: Publish Direct Public Download Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.0.1-${{ github.run_number }}
+          name: Fizz Live v1.0.1 (Coins & Gifts Update)
+          draft: false
+          prerelease: false
+          files: build/app/outputs/flutter-apk/FizzLive.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
