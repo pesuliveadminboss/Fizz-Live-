@@ -1,9 +1,12 @@
-name: Build Fizz Live APK
+name: Build and Release Fizz Live APK
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -86,7 +89,7 @@ jobs:
         include ":app"
         EOF
 
-        # Robust app/build.gradle with Proguard & MultiDex
+        # Robust app/build.gradle
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
@@ -154,9 +157,6 @@ jobs:
                     minifyEnabled false
                     shrinkResources false
                 }
-                debug {
-                    signingConfig signingConfigs.release
-                }
             }
         }
 
@@ -181,7 +181,7 @@ jobs:
         }
         EOF
 
-        # Write Guaranteed Crash-Proof AndroidManifest.xml
+        # AndroidManifest
         cat << 'EOF' > android/app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://schemas.android.com/apk/res/android"
             package="com.fizzlive.app">
@@ -224,7 +224,7 @@ jobs:
         </manifest>
         EOF
 
-        # Setup Clean Theme in res/values/styles.xml
+        # Clean Theme
         mkdir -p android/app/src/main/res/values
         cat << 'EOF' > android/app/src/main/res/values/styles.xml
         <?xml version="1.0" encoding="utf-8"?>
@@ -244,9 +244,16 @@ jobs:
     - name: Compile Official Signed Release APK
       run: flutter build apk --release --no-tree-shake-icons
 
-    - name: Upload Finished APK
-      uses: actions/upload-artifact@v4
+    - name: Rename APK for Distribution
+      run: cp build/app/outputs/flutter-apk/app-release.apk FizzLive.apk
+
+    - name: Publish Direct Public Download Release
+      uses: softprops/action-gh-release@v2
       with:
-        name: FizzLive-Final-APK
-        path: build/app/outputs/flutter-apk/app-release.apk
+        tag_name: v1.0.0
+        name: "Fizz Live Official Release"
+        body: "Official Signed APK of Fizz Live. Download FizzLive.apk below and install directly."
+        files: FizzLive.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
