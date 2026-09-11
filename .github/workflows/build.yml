@@ -28,9 +28,9 @@ jobs:
     - name: Recreate Clean Android Structure
       run: |
         rm -rf android
-        flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
+        flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app -a java
 
-    - name: Bump Gradle to 8.4 and Setup AGP
+    - name: Configure Android Build Environment
       run: |
         echo "android.useAndroidX=true" >> android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -43,7 +43,7 @@ jobs:
         # Upgrade Gradle Wrapper to 8.4
         sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.4-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
 
-        # Lock compile & target SDK to 34 and minSdk to 22
+        # Set compileSdk, targetSdk to 34 and minSdk to 22
         python3 -c "
         import glob, re
         for fpath in glob.glob('android/**/*.gradle*', recursive=True):
@@ -59,7 +59,7 @@ jobs:
                 f.write(c)
         "
 
-        # Settings with AGP 8.3.2 and Kotlin 1.9.24
+        # Safe settings.gradle with AGP 8.3.2 and Kotlin 1.9.24
         cat << 'EOF' > android/settings.gradle
         pluginManagement {
             def flutterSdkPath = {
@@ -88,7 +88,7 @@ jobs:
         include ":app"
         EOF
 
-        # Disable verifyReleaseResources and strip duplicate stdlib modules
+        # Disable verifyReleaseResources and strip legacy kotlin modules
         TARGET_BUILD_FILE=$(find android/app -name "build.gradle*" | head -n 1)
         cat << 'EOF' >> "$TARGET_BUILD_FILE"
 
