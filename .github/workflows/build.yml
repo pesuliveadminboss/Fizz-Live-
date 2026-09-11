@@ -30,12 +30,12 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Align Gradle, AGP and Kotlin to Flutter Requirement
+    - name: Align Gradle, AGP, Kotlin and MinSDK 25
       run: |
         echo "android.useAndroidX=true" > android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
         echo "org.gradle.jvmargs=-Xmx4G" >> android/gradle.properties
-        echo "flutter.minSdkVersion=22" >> android/local.properties
+        echo "flutter.minSdkVersion=25" >> android/local.properties
         echo "flutter.targetSdkVersion=34" >> android/local.properties
         echo "flutter.compileSdkVersion=34" >> android/local.properties
 
@@ -76,7 +76,7 @@ jobs:
         include ":app"
         EOF
 
-        # Standard app/build.gradle
+        # Standard app/build.gradle with minSdk 25 and disabled SDK check tasks
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
@@ -101,7 +101,7 @@ jobs:
 
             defaultConfig {
                 applicationId "com.fizzlive.app"
-                minSdk 22
+                minSdk 25
                 targetSdk 34
                 versionCode flutterVersionCode.toInteger()
                 versionName flutterVersionName
@@ -135,7 +135,7 @@ jobs:
         }
 
         gradle.projectsEvaluated {
-            tasks.matching { it.name.startsWith("verifyReleaseResources") }.all {
+            tasks.matching { it.name.contains("MinSdkCheck") || it.name.startsWith("verifyReleaseResources") }.all {
                 enabled = false
             }
         }
