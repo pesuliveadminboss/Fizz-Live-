@@ -31,17 +31,25 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Configure Gradle and Kotlin Strip
+    - name: Inject MinSDK 22 and Exclude Duplicates
       run: |
         echo "android.useAndroidX=true" >> android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
         echo "org.gradle.jvmargs=-Xmx4G" >> android/gradle.properties
         echo "android.newDsl=false" >> android/gradle.properties
-        echo "flutter.minSdkVersion=22" >> android/local.properties
-        echo "flutter.targetSdkVersion=34" >> android/local.properties
-        echo "flutter.compileSdkVersion=34" >> android/local.properties
 
-        # Safely exclude duplicate kotlin modules without corrupting flutter extensions
+        # Safely insert minSdkVersion 22 right under defaultConfig
+        python3 -c "
+        path = 'android/app/build.gradle'
+        with open(path, 'r') as f:
+            content = f.read()
+        content = content.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 22')
+        content = content.replace('minSdkVersion = flutter.minSdkVersion', 'minSdkVersion = 22')
+        with open(path, 'w') as f:
+            f.write(content)
+        "
+
+        # Exclude legacy duplicate kotlin modules
         cat << 'EOF' >> android/app/build.gradle
 
         configurations.all {
