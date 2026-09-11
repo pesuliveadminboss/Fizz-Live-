@@ -30,7 +30,7 @@ jobs:
         rm -rf android
         flutter create . --project-name fizz_live --platforms=android --org com.fizzlive.app
 
-    - name: Configure MultiDex, Android & Safe Packaging
+    - name: Create Free Official Keystore & Safe Signing
       run: |
         echo "android.useAndroidX=true" > android/gradle.properties
         echo "android.enableJetifier=true" >> android/gradle.properties
@@ -38,6 +38,9 @@ jobs:
         echo "flutter.minSdkVersion=25" >> android/local.properties
         echo "flutter.targetSdkVersion=35" >> android/local.properties
         echo "flutter.compileSdkVersion=35" >> android/local.properties
+
+        # Generate Free Official Release Keystore
+        keytool -genkeypair -v -keystore android/app/release.jks -storepass fizzlive123 -alias fizzlive -keypass fizzlive123 -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=FizzLive, OU=App, O=Fizz, L=Coimbatore, S=TN, C=IN"
 
         # Upgrade Gradle Wrapper strictly to Gradle 8.14
         sed -i 's/gradle-[0-9.]*-all.zip/gradle-8.14-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
@@ -76,7 +79,7 @@ jobs:
         include ":app"
         EOF
 
-        # Standard app/build.gradle with MultiDex and packaging options
+        # Standard app/build.gradle with Official Release Signing
         cat << 'EOF' > android/app/build.gradle
         plugins {
             id "com.android.application"
@@ -98,6 +101,15 @@ jobs:
         android {
             namespace "com.fizzlive.app"
             compileSdk 35
+
+            signingConfigs {
+                release {
+                    storeFile file('release.jks')
+                    storePassword 'fizzlive123'
+                    keyAlias 'fizzlive'
+                    keyPassword 'fizzlive123'
+                }
+            }
 
             defaultConfig {
                 applicationId "com.fizzlive.app"
@@ -129,12 +141,9 @@ jobs:
 
             buildTypes {
                 release {
-                    signingConfig signingConfigs.debug
+                    signingConfig signingConfigs.release
                     minifyEnabled false
                     shrinkResources false
-                }
-                debug {
-                    signingConfig signingConfigs.debug
                 }
             }
         }
@@ -170,12 +179,12 @@ jobs:
     - name: Generate App Launcher Icons
       run: dart run flutter_launcher_icons
 
-    - name: Compile Universal Debug APK
-      run: flutter build apk --debug
+    - name: Compile Official Signed Release APK
+      run: flutter build apk --release --no-tree-shake-icons
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
       with:
-        name: FizzLive-APK
-        path: build/app/outputs/flutter-apk/app-debug.apk
+        name: FizzLive-Signed-Release-APK
+        path: build/app/outputs/flutter-apk/app-release.apk
         
