@@ -24,6 +24,7 @@ class FizzLiveApp extends StatelessWidget {
   }
 }
 
+// 1. AGE GATEWAY (18+ MANDATORY)
 class AgeVerificationGate extends StatelessWidget {
   const AgeVerificationGate({super.key});
 
@@ -57,7 +58,7 @@ class AgeVerificationGate extends StatelessWidget {
                   const Text('Age Verification Required', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   const Text(
-                    'Fizz Live contains live streams intended strictly for adults.\nYou must be 18+ to enter.',
+                    'Fizz Live contains live streams strictly intended for adults.\nYou must be 18+ to enter.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
                   ),
@@ -73,7 +74,7 @@ class AgeVerificationGate extends StatelessWidget {
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const FastLoginScreen()),
+                          MaterialPageRoute(builder: (context) => const UserRegistrationScreen()),
                         );
                       },
                       child: const Text('I Am 18 or Older - Enter', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -89,8 +90,18 @@ class AgeVerificationGate extends StatelessWidget {
   }
 }
 
-class FastLoginScreen extends StatelessWidget {
-  const FastLoginScreen({super.key});
+// 2. NEW USER SETUP: NAME, AGE & GENDER (MALE/FEMALE)
+class UserRegistrationScreen extends StatefulWidget {
+  const UserRegistrationScreen({super.key});
+
+  @override
+  State<UserRegistrationScreen> createState() => _UserRegistrationScreenState();
+}
+
+class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
+  final _nameController = TextEditingController(text: 'Sweet Girl');
+  final _ageController = TextEditingController(text: '20');
+  String _selectedGender = 'Female'; // Default Female
 
   void _showSecretAdminPrompt(BuildContext context) {
     final pinController = TextEditingController();
@@ -115,7 +126,14 @@ class FastLoginScreen extends StatelessWidget {
               if (pinController.text.trim() == '7777') {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: true)),
+                  MaterialPageRoute(
+                    builder: (context) => const MainDashboard(
+                      userName: 'Super Admin',
+                      gender: 'Female',
+                      userAge: 25,
+                      isSuperAdmin: true,
+                    ),
+                  ),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid Master PIN!')));
@@ -128,56 +146,183 @@ class FastLoginScreen extends StatelessWidget {
     );
   }
 
+  void _proceedLogin(bool isFast) {
+    int age = int.tryParse(_ageController.text.trim()) ?? 18;
+    if (age < 18) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You must be 18+ to register!')));
+      return;
+    }
+
+    String finalName = isFast ? 'User_${Random().nextInt(899) + 100}' : _nameController.text.trim();
+    if (finalName.isEmpty) finalName = 'User_${Random().nextInt(899) + 100}';
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MainDashboard(
+          userName: finalName,
+          gender: _selectedGender,
+          userAge: age,
+          isSuperAdmin: false,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF2E93),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                        ),
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: false)),
-                          );
-                        },
-                        child: const Text('Fast Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    GestureDetector(
-                      onLongPress: () => _showSecretAdminPrompt(context),
-                      child: const Text('Agree to User Agreement and Privacy Policy', style: TextStyle(color: Colors.white38, fontSize: 11)),
-                    ),
-                  ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              const Center(
+                child: Text('Create Your Profile', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 8),
+              const Center(
+                child: Text('Select gender carefully. Live streaming is verified.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+              ),
+              const SizedBox(height: 28),
+
+              // Name Field
+              const Text('Display Name', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _nameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFF1B1926),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  prefixIcon: const Icon(Icons.person, color: Color(0xFFFF2E93)),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 18),
+
+              // Age Field
+              const Text('Age (Must be 18+)', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _ageController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFF1B1926),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  prefixIcon: const Icon(Icons.cake, color: Color(0xFFFF2E93)),
+                ),
+              ),
+              const SizedBox(height: 22),
+
+              // Gender Selection Row
+              const Text('Select Gender', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _selectedGender = 'Female'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: _selectedGender == 'Female' ? const Color(0xFFFF2E93) : const Color(0xFF1B1926),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: _selectedGender == 'Female' ? Colors.white : Colors.white12),
+                        ),
+                        child: Column(
+                          children: const [
+                            Icon(Icons.female, color: Colors.white, size: 28),
+                            SizedBox(height: 4),
+                            Text('Female (Can Stream)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _selectedGender = 'Male'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: _selectedGender == 'Male' ? Colors.blueAccent : const Color(0xFF1B1926),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: _selectedGender == 'Male' ? Colors.white : Colors.white12),
+                        ),
+                        child: Column(
+                          children: const [
+                            Icon(Icons.male, color: Colors.white, size: 28),
+                            SizedBox(height: 4),
+                            Text('Male (Viewer Only)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 34),
+
+              // Submit Profile Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF2E93),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  ),
+                  onPressed: () => _proceedLogin(false),
+                  child: const Text('Confirm & Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Fast Login Bypass
+              Center(
+                child: TextButton(
+                  onPressed: () => _proceedLogin(true),
+                  child: const Text('⚡ Fast Login with Default Settings', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Hidden Admin Link
+              Center(
+                child: GestureDetector(
+                  onLongPress: () => _showSecretAdminPrompt(context),
+                  child: const Text('Agree to User Agreement and Privacy Policy', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
+// 3. MAIN APP DASHBOARD
 class MainDashboard extends StatefulWidget {
+  final String userName;
+  final String gender;
+  final int userAge;
   final bool isSuperAdmin;
-  const MainDashboard({super.key, this.isSuperAdmin = false});
+
+  const MainDashboard({
+    super.key,
+    required this.userName,
+    required this.gender,
+    required this.userAge,
+    this.isSuperAdmin = false,
+  });
 
   @override
   State<MainDashboard> createState() => _MainDashboardState();
@@ -185,17 +330,33 @@ class MainDashboard extends StatefulWidget {
 
 class _MainDashboardState extends State<MainDashboard> {
   int _currentIndex = 0;
-  final String userID = 'user_${Random().nextInt(9000) + 1000}';
-  final String userName = 'User_${Random().nextInt(900) + 100}';
+  late String userID;
+
+  @override
+  void initState() {
+    super.initState();
+    userID = 'user_${Random().nextInt(9000) + 1000}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final screens = [
-      ForYouScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
-      FollowScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
+      ForYouScreen(
+        userID: userID,
+        userName: widget.userName,
+        gender: widget.gender,
+        isSuperAdmin: widget.isSuperAdmin,
+      ),
+      FollowScreen(userID: userID, userName: widget.userName, isSuperAdmin: widget.isSuperAdmin),
       const Center(child: Text('Game Center Hub', style: TextStyle(color: Colors.white))),
       const Center(child: Text('Messages & Calls', style: TextStyle(color: Colors.white))),
-      MeProfileScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
+      MeProfileScreen(
+        userID: userID,
+        userName: widget.userName,
+        gender: widget.gender,
+        userAge: widget.userAge,
+        isSuperAdmin: widget.isSuperAdmin,
+      ),
     ];
 
     return Scaffold(
@@ -219,14 +380,26 @@ class _MainDashboardState extends State<MainDashboard> {
   }
 }
 
+// 4. FOR YOU HOME (GO LIVE VISIBLE ONLY FOR FEMALE OR SUPER ADMIN)
 class ForYouScreen extends StatelessWidget {
   final String userID;
   final String userName;
+  final String gender;
   final bool isSuperAdmin;
-  const ForYouScreen({super.key, required this.userID, required this.userName, required this.isSuperAdmin});
+
+  const ForYouScreen({
+    super.key,
+    required this.userID,
+    required this.userName,
+    required this.gender,
+    required this.isSuperAdmin,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Only Female or Super Admin has host streaming rights!
+    final bool canStream = isSuperAdmin || gender.toLowerCase() == 'female';
+
     final streamers = [
       {'name': 'وردة (Rose)', 'id': 'room_101', 'tag': 'Hot'},
       {'name': 'ROPA Live', 'id': 'room_102', 'tag': 'Live'},
@@ -246,6 +419,27 @@ class ForYouScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
               child: const Text('SUPER ADMIN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+
+          // Stream button appears ONLY IF FEMALE OR ADMIN
+          if (canStream)
+            IconButton(
+              icon: const Icon(Icons.videocam, color: Color(0xFFFF2E93), size: 28),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LiveStreamScreen(
+                      roomID: 'stream_$userID',
+                      isHost: true,
+                      userID: userID,
+                      userName: userName,
+                      hostTitle: '$userName (Host)',
+                      isSuperAdmin: isSuperAdmin,
+                    ),
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -267,7 +461,7 @@ class ForYouScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (context) => LiveStreamScreen(
                     roomID: s['id']!,
-                    isHost: false,
+                    isHost: false, // Men & Viewers watch here
                     userID: userID,
                     userName: userName,
                     hostTitle: s['name']!,
@@ -306,6 +500,7 @@ class ForYouScreen extends StatelessWidget {
   }
 }
 
+// 5. FOLLOW LIST
 class FollowScreen extends StatelessWidget {
   final String userID;
   final String userName;
@@ -320,211 +515,4 @@ class FollowScreen extends StatelessWidget {
         children: [
           ListTile(
             leading: const CircleAvatar(backgroundColor: Colors.pink, child: Icon(Icons.person, color: Colors.white)),
-            title: const Text('Sexy Queen', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            subtitle: const Text('Streaming Now', style: TextStyle(color: Colors.white54)),
-            trailing: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93)),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => LiveStreamScreen(
-                      roomID: 'room_201',
-                      isHost: false,
-                      userID: userID,
-                      userName: userName,
-                      hostTitle: 'Sexy Queen',
-                      isSuperAdmin: isSuperAdmin,
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Watch'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class MeProfileScreen extends StatefulWidget {
-  final String userID;
-  final String userName;
-  final bool isSuperAdmin;
-  const MeProfileScreen({super.key, required this.userID, required this.userName, required this.isSuperAdmin});
-
-  @override
-  State<MeProfileScreen> createState() => _MeProfileScreenState();
-}
-
-class _MeProfileScreenState extends State<MeProfileScreen> {
-  int userGems = 2500;
-
-  void _showRechargeSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1F1D2B),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Top Up Gems Wallet', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 14),
-              _packRow('100 Gems', '₹99', () => _addGems(100)),
-              _packRow('600 Gems (+50 Free)', '₹499', () => _addGems(650)),
-              _packRow('2,500 Gems (+300 Free)', '₹1,999', () => _addGems(2800)),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _addGems(int count) {
-    Navigator.pop(context);
-    setState(() => userGems += count);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added $count Gems to Wallet!')));
-  }
-
-  Widget _packRow(String label, String price, VoidCallback onTap) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(color: const Color(0xFF282538), borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        leading: const Icon(Icons.diamond, color: Colors.cyanAccent),
-        title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        trailing: ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93)),
-          onPressed: onTap,
-          child: Text(price),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Me Profile')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: Colors.purpleAccent,
-                child: Text(widget.isSuperAdmin ? 'A' : 'U', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.isSuperAdmin ? 'Super Admin Master' : widget.userName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text('ID: ${widget.userID}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          InkWell(
-            onTap: _showRechargeSheet,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: const Color(0xFF221E38), borderRadius: BorderRadius.circular(14)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('My Gems Wallet', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                      const SizedBox(height: 4),
-                      Text(widget.isSuperAdmin ? 'UNLIMITED' : '$userGems Gems', style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 18)),
-                    ],
-                  ),
-                  const Icon(Icons.add_circle, color: Color(0xFFFF2E93), size: 28),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class LiveStreamScreen extends StatefulWidget {
-  final String roomID;
-  final bool isHost;
-  final String userID;
-  final String userName;
-  final String hostTitle;
-  final bool isSuperAdmin;
-
-  const LiveStreamScreen({
-    super.key,
-    required this.roomID,
-    required this.isHost,
-    required this.userID,
-    required this.userName,
-    this.hostTitle = 'Live Stream',
-    this.isSuperAdmin = false,
-  });
-
-  @override
-  State<LiveStreamScreen> createState() => _LiveStreamScreenState();
-}
-
-class _LiveStreamScreenState extends State<LiveStreamScreen> {
-  String? _giftSplash;
-
-  void _showGiftTray() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1B1926).withOpacity(0.95),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Send In-Stream Gift', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _giftItem('🌹 Rose', () => _sendGift('🌹 ROSE BLAST!')),
-                  _giftItem('🚀 Rocket', () => _sendGift('🚀 MEGA ROCKET FIRED!')),
-                  _giftItem('🏎️ Sports Car', () => _sendGift('🏎️ SPORTS CAR ARRIVED!')),
-                  _giftItem('👑 Crown', () => _sendGift('👑 ROYAL CROWN PRESENTED!')),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _sendGift(String text) {
-    Navigator.pop(context);
-    setState(() => _giftSplash = text);
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _giftSplash = null);
-    });
-  }
-
-  Widget _giftItem(String label, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-  
+            title: const Text('Sexy Queen', style: TextStyle(color: Colors.w
