@@ -1,9 +1,11 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  MobileAds.instance.initialize();
   runApp(const FizzApp());
 }
 
@@ -146,6 +148,34 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   int _idx = 0;
   late final String uid = 'user_${Random().nextInt(9000)+1000}';
+  BannerAd? _bannerAd;
+  bool _isAdLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerAd();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: 'ca-app-pub-3940256099942544/6300978111', // Google Test Ad ID (Safe for testing)
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (_) => setState(() => _isAdLoaded = true),
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+        },
+      ),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +196,7 @@ class _DashboardState extends State<Dashboard> {
             builder: (context, data, child) {
               if (data == null) return const SizedBox.shrink();
               return Positioned(
-                bottom: 65, right: 12,
+                bottom: _isAdLoaded ? 115 : 65, right: 12,
                 child: Container(
                   width: 140, height: 200,
                   decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFF2E93), width: 2)),
@@ -200,19 +230,30 @@ class _DashboardState extends State<Dashboard> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _idx,
-        onTap: (i) => setState(() => _idx = i),
-        backgroundColor: const Color(0xFF0F0E17),
-        selectedItemColor: const Color(0xFFFF2E93),
-        unselectedItemColor: Colors.white38,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.videocam), label: 'Live'),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Follow'),
-          BottomNavigationBarItem(icon: Icon(Icons.casino), label: 'Game'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Me'),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isAdLoaded && _bannerAd != null)
+            SizedBox(
+              height: _bannerAd!.size.height.toDouble(),
+              width: _bannerAd!.size.width.toDouble(),
+              child: AdWidget(ad: _bannerAd!),
+            ),
+          BottomNavigationBar(
+            currentIndex: _idx,
+            onTap: (i) => setState(() => _idx = i),
+            backgroundColor: const Color(0xFF0F0E17),
+            selectedItemColor: const Color(0xFFFF2E93),
+            unselectedItemColor: Colors.white38,
+            type: BottomNavigationBarType.fixed,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.videocam), label: 'Live'),
+              BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Follow'),
+              BottomNavigationBarItem(icon: Icon(Icons.casino), label: 'Game'),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Me'),
+            ],
+          ),
         ],
       ),
     );
@@ -237,7 +278,7 @@ class HomeTab extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fizz Live Pro'),
+        title: const Text('Fizz Live Pro (Ad Monetized)'),
         actions: [
           if (canGoLive)
             IconButton(
@@ -343,6 +384,29 @@ class _LiveRoomState extends State<LiveRoom> {
   String? giftSplash;
   final List<String> messages = ['Welcome!', 'Hello! 👋'];
   final TextEditingController chatController = TextEditingController();
+  InterstitialAd? _interstitialAd;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.isHost) {
+      _loadInterstitialAd();
+    }
+  }
+
+  void _loadInterstitialAd() {
+    InterstitialAd.load(
+      adUnitId: 'ca-app-pub-3940256099942544/1033173712', // Google Test Interstitial ID
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+          _interstitialAd?.show(); // Show ad when entering live room
+        },
+        onAdFailedToLoad: (err) {},
+      ),
+    );
+  }
 
   void sendGift(String giftName, int cost) {
     if (!widget.isAdmin && globalUserGems.value < cost) {
@@ -438,38 +502,4 @@ class _LiveRoomState extends State<LiveRoom> {
                     Expanded(
                       child: TextField(
                         controller: chatController,
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                        decoration: InputDecoration(
-                          hintText: 'Say something...',
-                          filled: true, fillColor: Colors.black54,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                        ),
-                      ),
-                    ),
-                    IconButton(icon: const Icon(Icons.send, color: Color(0xFFFF2E93)), onPressed: sendMessage),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          if (giftSplash != null)
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                decoration: BoxDecoration(gradient: const LinearGradient(colors: [Colors.pinkAccent, Colors.purpleAccent]), borderRadius: BorderRadius.circular(30)),
-                child: Text(giftSplash!, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          Positioned(
-            bottom: 24, right: 16,
-            child: FloatingActionButton(
-              mini: true, backgroundColor: const Color(0xFFFF2E93),
-              onPressed: openGiftTray,
-              child: const Icon(Icons.card_giftcard, color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+                        style: const TextStyle(color: Colors.white, fontSize: 1
