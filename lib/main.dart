@@ -2,10 +2,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
-void main() => runApp(const FizzLiveApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const FizzLiveApp());
+}
 
 class FizzLiveApp extends StatelessWidget {
   const FizzLiveApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -22,6 +26,7 @@ class FizzLiveApp extends StatelessWidget {
 
 class AgeVerificationGate extends StatelessWidget {
   const AgeVerificationGate({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,20 +47,35 @@ class AgeVerificationGate extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFFFF2E93).withOpacity(0.15)),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFFF2E93).withOpacity(0.15),
+                    ),
                     child: const Text('18+', style: TextStyle(color: Color(0xFFFF2E93), fontSize: 32, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 18),
                   const Text('Age Verification Required', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
-                  const Text('Fizz Live contains live video streams strictly intended for adults.\nYou must be 18+ to enter.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
+                  const Text(
+                    'Fizz Live contains live streams intended strictly for adults.\nYou must be 18+ to enter.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
-                      onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const FastLoginScreen())),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF2E93),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                      ),
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const FastLoginScreen()),
+                        );
+                      },
                       child: const Text('I Am 18 or Older - Enter', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                     ),
                   ),
@@ -93,7 +113,10 @@ class FastLoginScreen extends StatelessWidget {
             onPressed: () {
               Navigator.pop(context);
               if (pinController.text.trim() == '7777') {
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: true)));
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: true)),
+                );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid Master PIN!')));
               }
@@ -123,8 +146,16 @@ class FastLoginScreen extends StatelessWidget {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
-                        onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: false))),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF2E93),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                        ),
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: false)),
+                          );
+                        },
                         child: const Text('Fast Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                       ),
                     ),
@@ -147,6 +178,7 @@ class FastLoginScreen extends StatelessWidget {
 class MainDashboard extends StatefulWidget {
   final bool isSuperAdmin;
   const MainDashboard({super.key, this.isSuperAdmin = false});
+
   @override
   State<MainDashboard> createState() => _MainDashboardState();
 }
@@ -162,9 +194,10 @@ class _MainDashboardState extends State<MainDashboard> {
       ForYouScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
       FollowScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
       const Center(child: Text('Game Center Hub', style: TextStyle(color: Colors.white))),
-      const Center(child: Text('Messages & Direct Calls', style: TextStyle(color: Colors.white))),
+      const Center(child: Text('Messages & Calls', style: TextStyle(color: Colors.white))),
       MeProfileScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
     ];
+
     return Scaffold(
       body: screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
@@ -219,7 +252,12 @@ class ForYouScreen extends StatelessWidget {
       body: GridView.builder(
         padding: const EdgeInsets.all(10),
         itemCount: streamers.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.75),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.75,
+        ),
         itemBuilder: (context, index) {
           final s = streamers[index];
           return InkWell(
@@ -227,7 +265,7 @@ class ForYouScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => LiveStreamView(
+                  builder: (context) => LiveStreamScreen(
                     roomID: s['id']!,
                     isHost: false,
                     userID: userID,
@@ -290,7 +328,14 @@ class FollowScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => LiveStreamView(roomID: 'room_201', isHost: false, userID: userID, userName: userName, hostTitle: 'Sexy Queen', isSuperAdmin: isSuperAdmin),
+                    builder: (context) => LiveStreamScreen(
+                      roomID: 'room_201',
+                      isHost: false,
+                      userID: userID,
+                      userName: userName,
+                      hostTitle: 'Sexy Queen',
+                      isSuperAdmin: isSuperAdmin,
+                    ),
                   ),
                 );
               },
@@ -308,6 +353,7 @@ class MeProfileScreen extends StatefulWidget {
   final String userName;
   final bool isSuperAdmin;
   const MeProfileScreen({super.key, required this.userID, required this.userName, required this.isSuperAdmin});
+
   @override
   State<MeProfileScreen> createState() => _MeProfileScreenState();
 }
@@ -351,7 +397,11 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
       child: ListTile(
         leading: const Icon(Icons.diamond, color: Colors.cyanAccent),
         title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        trailing: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93)), onPressed: onTap, child: Text(price)),
+        trailing: ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93)),
+          onPressed: onTap,
+          child: Text(price),
+        ),
       ),
     );
   }
@@ -365,7 +415,11 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(radius: 28, backgroundColor: Colors.purpleAccent, child: Text(widget.isSuperAdmin ? 'A' : 'U', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold))),
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: Colors.purpleAccent,
+                child: Text(widget.isSuperAdmin ? 'A' : 'U', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+              ),
               const SizedBox(width: 14),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,7 +458,7 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
   }
 }
 
-class LiveStreamView extends StatefulWidget {
+class LiveStreamScreen extends StatefulWidget {
   final String roomID;
   final bool isHost;
   final String userID;
@@ -412,7 +466,7 @@ class LiveStreamView extends StatefulWidget {
   final String hostTitle;
   final bool isSuperAdmin;
 
-  const LiveStreamView({
+  const LiveStreamScreen({
     super.key,
     required this.roomID,
     required this.isHost,
@@ -423,10 +477,10 @@ class LiveStreamView extends StatefulWidget {
   });
 
   @override
-  State<LiveStreamView> createState() => _LiveStreamViewState();
+  State<LiveStreamScreen> createState() => _LiveStreamScreenState();
 }
 
-class _LiveStreamViewState extends State<LiveStreamView> {
+class _LiveStreamScreenState extends State<LiveStreamScreen> {
   String? _giftSplash;
 
   void _showGiftTray() {
@@ -473,28 +527,4 @@ class _LiveStreamViewState extends State<LiveStreamView> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFF2B273D), borderRadius: BorderRadius.circular(12)),
-            child: Text(label.split(' ')[0], style: const TextStyle(fontSize: 26)),
-          ),
-          const SizedBox(height: 4),
-          Text(label.split(' ')[1], style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          ZegoUIKitPrebuiltLiveStreaming(
-            appID: 1576404113,
-            appSign: 'b76540c4974fa2e1ec73787768beaa2c93839634e3e3b33100be649f82662c11',
-            userID: widget.userID,
-            userName: widget.isSuperAdmin ? 'System Inspector' : widget.userName,
-            liveID: widget.roomID,
-            config: widget.isHost
-                ? ZegoUIKitPrebuiltLiveStreamingConfig.host()
-                : ZegoUIKitP
+  
