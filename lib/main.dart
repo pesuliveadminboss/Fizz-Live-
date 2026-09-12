@@ -40,33 +40,6 @@ class AgeVerificationGate extends StatefulWidget {
 
 class _AgeVerificationGateState extends State<AgeVerificationGate> {
   @override
-  void initState() {
-    super.initState();
-    _checkAgeGate();
-  }
-
-  void _checkAgeGate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final bool isVerified = prefs.getBool('age_verified_18') ?? false;
-    if (isVerified) {
-      _goToLogin();
-    }
-  }
-
-  void _goToLogin() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const FastLoginScreen()),
-    );
-  }
-
-  void _confirmAge() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('age_verified_18', true);
-    _goToLogin();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D0C13),
@@ -109,7 +82,12 @@ class _AgeVerificationGateState extends State<AgeVerificationGate> {
                         backgroundColor: const Color(0xFFFF2E93),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                       ),
-                      onPressed: _confirmAge,
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const FastLoginScreen()),
+                        );
+                      },
                       child: const Text("I Am 18 or Older - Enter", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                     ),
                   ),
@@ -526,4 +504,10 @@ class GameDashboardScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(14),
         children: [
-     
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)]),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text("Bet Gems & Win Real Rewards! Direct Paid Bets.", style: TextStyle(color: Colors.white,
