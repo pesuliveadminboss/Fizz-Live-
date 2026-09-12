@@ -27,11 +27,14 @@ jobs:
           flutter-version: '3.29.0'
           channel: 'stable'
 
-      - name: Recreate Clean Android Project
+      - name: Recreate Clean Android Project & Add Ads
         run: |
           rm -rf android
           flutter create --platforms=android --org com.fizzlive --project-name fizz_live .
           
+          # Automatically inject google_mobile_ads into pubspec.yaml safely
+          sed -i '/zego_uikit_prebuilt_live_streaming: ^3.15.6/a \  google_mobile_ads: ^5.2.0' pubspec.yaml
+
           # Kotlin 2.1.0 dependency lock
           find android -name "settings.gradle*" -exec sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "2.1.0"/g' {} + || true
           find android -name "settings.gradle*" -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g' {} + || true
@@ -65,13 +68,6 @@ jobs:
           }
           KOTLIN_EOF
 
-          # Logo Setup
-          if [ -f "app_logo.png" ]; then
-            for dir in android/app/src/main/res/mipmap-*; do
-              cp app_logo.png "$dir/ic_launcher.png" || true
-            done
-          fi
-
       - name: Install Packages
         run: flutter pub get
 
@@ -85,7 +81,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: release-${{ github.run_id }}-${{ github.run_number }}
-          name: Fizz Live Pro (Male/Female Access Controlled Release)
+          name: Fizz Live Pro (Monetized Ads Release)
           draft: false
           prerelease: false
           files: build/app/outputs/flutter-apk/FizzLive.apk
