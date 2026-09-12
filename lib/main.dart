@@ -341,12 +341,12 @@ class LiveRoom extends StatefulWidget {
 
 class _LiveRoomState extends State<LiveRoom> {
   String? giftSplash;
-  final List<String> messages = ['Welcome to the live stream!', 'Hello everyone! 👋'];
+  final List<String> messages = ['Welcome to live stream!', 'Hello! 👋'];
   final TextEditingController chatController = TextEditingController();
 
   void sendGift(String giftName, int cost) {
     if (!widget.isAdmin && globalUserGems.value < cost) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insufficient Gems! Please Top Up')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insufficient Gems!')));
       return;
     }
     if (!widget.isAdmin) {
@@ -450,26 +450,20 @@ class _LiveRoomState extends State<LiveRoom> {
               ),
             ),
           ),
-          // Live Chat Messages & Input Box at Bottom Left
           Positioned(
-            bottom: 70,
-            left: 12,
-            right: 80,
+            bottom: 70, left: 12, right: 80,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  height: 120,
-                  padding: const EdgeInsets.all(8),
+                  height: 120, padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
                   child: ListView.builder(
                     itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(messages[index], style: const TextStyle(color: Colors.white, fontSize: 12, shadows: [Shadow(color: Colors.black, blurRadius: 2)])),
-                      );
-                    },
+                    itemBuilder: (context, i) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(messages[i], style: const TextStyle(color: Colors.white, fontSize: 12)),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -482,5 +476,7 @@ class _LiveRoomState extends State<LiveRoom> {
                         decoration: InputDecoration(
                           hintText: 'Say something...',
                           hintStyle: const TextStyle(color: Colors.white54),
-                          filled: true,
-                  
+                          filled: true, fillColor: Colors.black54,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                
