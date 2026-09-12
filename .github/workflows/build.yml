@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,22 +33,28 @@ jobs:
           rm -rf android
           flutter create --platforms=android --org com.fizzlive --project-name fizz_live .
           
-          # Force Kotlin 2.1.0 in settings.gradle / settings.gradle.kts
+          # Kotlin 2.1.0 dependency lock
           find android -name "settings.gradle*" -exec sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "2.1.0"/g' {} + || true
           find android -name "settings.gradle*" -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g' {} + || true
 
-          # Update minSdk to 22 across both Groovy and KTS build files
+          # Set minSdk to 22
           find android/app -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 22/g' {} + || true
           find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 22/g' {} + || true
           find android/app -name "build.gradle*" -exec sed -i 's/minSdk = [0-9]*/minSdk = 22/g' {} + || true
           find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion [0-9]*/minSdkVersion 22/g' {} + || true
 
-          # Inject permissions and overrideLibrary to bypass any minSdkVersion merge block
+          # Android manifest & permissions
           sed -i 's/<manifest/<manifest xmlns:tools="http:\/\/schemas.android.com\/tools"/g' android/app/src/main/AndroidManifest.xml
           sed -i '/<application/i <uses-sdk tools:overrideLibrary="com.github.rmtmckenzie.native_device_orientation"\/>\n<uses-permission android:name="android.permission.INTERNET"\/>\n<uses-permission android:name="android.permission.CAMERA"\/>\n<uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"\/>' android/app/src/main/AndroidManifest.xml
 
-      - name: Install Packages
-        run: flutter pub get
+          # Native FLAG_SECURE injection (Free Screenshot & Screen Record Blocker)
+          find android -name "MainActivity.kt" -exec sed -i 's/import io.flutter.embedding.android.FlutterActivity/import io.flutter.embedding.android.FlutterActivity\nimport android.view.WindowManager\nimport android.os.Bundle/g' {} + || true
+          find android -name "MainActivity.kt" -exec sed -i '/class MainActivity/a \    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)\n    }' {} + || true
+
+      - name: Install Packages & Generate App Icon
+        run: |
+          flutter pub get
+          dart run flutter_launcher_icons
 
       - name: Compile Official Signed Release APK
         run: flutter build apk --release --no-tree-shake-icons
@@ -57,8 +66,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.0.1-${{ github.run_number }}
-          name: Fizz Live v1.0.1 (Coins & Gifts Update)
+          tag_name: v1.0.3-${{ github.run_number }}
+          name: Fizz Live v1.0.3 (Anti-Screenshot, 18+ Gate & Secret Admin Mode)
           draft: false
           prerelease: false
           files: build/app/outputs/flutter-apk/FizzLive.apk
