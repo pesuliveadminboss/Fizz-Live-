@@ -25,15 +25,15 @@ jobs:
           flutter-version: '3.27.3'
           channel: 'stable'
 
-      - name: Recreate Clean Android Project with Kotlin Fix
+      - name: Recreate Clean Android Project with Kotlin 2.1.0 Fix
         run: |
           rm -rf android
           flutter create --platforms=android --org com.fizzlive --project-name fizz_live .
           
-          # Update Kotlin version in settings.gradle
-          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.24"/g' android/settings.gradle || true
+          # Force Kotlin 2.1.0 in settings.gradle
+          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g' android/settings.gradle || true
 
-          # Set proper SDK versions
+          # Set Android SDK versions
           sed -i 's/compileSdk = .*/compileSdk = 34/g' android/app/build.gradle || true
           sed -i 's/minSdk = .*/minSdk = 21/g' android/app/build.gradle || true
           sed -i 's/targetSdk = .*/targetSdk = 34/g' android/app/build.gradle || true
