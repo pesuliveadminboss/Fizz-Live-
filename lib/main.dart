@@ -276,7 +276,7 @@ class HomeTab extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fizz Live Pro (Monetized)'),
+        title: const Text('Fizz Live Pro'),
         actions: [
           if (canGoLive)
             IconButton(
@@ -493,7 +493,11 @@ class _LiveRoomState extends State<LiveRoom> {
                       child: TextField(
                         controller: chatController,
                         style: const TextStyle(color: Colors.white, fontSize: 12),
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: 'Say something...',
-                          filled: true, fillColor: Colors.black54,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borde
+                          filled: true,
+                          fillColor: Colors.black54,
+                        ),
+                      ),
+                    ),
+    
