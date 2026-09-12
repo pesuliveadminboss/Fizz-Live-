@@ -192,7 +192,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 }
 
-// GLOBAL CONTROLLER FOR MINI-PLAYER PIP
 ValueNotifier<Map<String, dynamic>?> activeMiniPlayer = ValueNotifier<Map<String, dynamic>?>(null);
 
 class MainDashboard extends StatefulWidget {
@@ -209,7 +208,13 @@ class MainDashboard extends StatefulWidget {
 
 class _MainDashboardState extends State<MainDashboard> {
   int _idx = 0;
-  final String userID = 'user_${Random().nextInt(9000) + 1000}';
+  late final String userID;
+
+  @override
+  void initState() {
+    super.initState();
+    userID = 'user_${Random().nextInt(9000) + 1000}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +230,6 @@ class _MainDashboardState extends State<MainDashboard> {
       body: Stack(
         children: [
           IndexedStack(index: _idx, children: screens),
-          // FLOATING MINI-PLAYER (BOTTOM RIGHT MINI WINDOW)
           ValueListenableBuilder<Map<String, dynamic>?>(
             valueListenable: activeMiniPlayer,
             builder: (context, miniData, child) {
@@ -246,36 +250,31 @@ class _MainDashboardState extends State<MainDashboard> {
                     ),
                     child: Stack(
                       children: [
-                        // If Streamer is Busy, show Black Screen with Busy notice
-                        if (miniData['isBusy'] == true)
-                          Container(
-                            color: Colors.black,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.do_not_disturb_on, color: Colors.redAccent, size: 36),
-                                const SizedBox(height: 8),
-                                Text(miniData['hostTitle'], style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                                const SizedBox(height: 4),
-                                const Text('STREAMER BUSY', style: TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          )
-                        else
-                        // Audio-Only / Video Mini Stream
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: ZegoUIKitPrebuiltLiveStreaming(
-                              appID: 1576404113,
-                              appSign: 'b76540c4974fa2e1ec73787768beaa2c93839634e3e3b33100be649f82662c11',
-                              userID: miniData['userID'],
-                              userName: miniData['userName'],
-                              liveID: miniData['roomID'],
-                              config: ZegoUIKitPrebuiltLiveStreamingConfig.audience(),
-                            ),
-                          ),
-
-                        // Top Close (X) button for Mini Player
+                        miniData['isBusy'] == true
+                            ? Container(
+                                color: Colors.black,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.do_not_disturb_on, color: Colors.redAccent, size: 36),
+                                    const SizedBox(height: 8),
+                                    Text(miniData['hostTitle'], style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                                    const SizedBox(height: 4),
+                                    const Text('STREAMER BUSY', style: TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              )
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: ZegoUIKitPrebuiltLiveStreaming(
+                                  appID: 1576404113,
+                                  appSign: 'b76540c4974fa2e1ec73787768beaa2c93839634e3e3b33100be649f82662c11',
+                                  userID: userID,
+                                  userName: widget.userName,
+                                  liveID: miniData['roomID'],
+                                  config: ZegoUIKitPrebuiltLiveStreamingConfig.audience(),
+                                ),
+                              ),
                         Positioned(
                           top: 4,
                           right: 4,
@@ -343,7 +342,7 @@ class ForYouScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.video_call, color: Color(0xFFFF2E93), size: 30),
               onPressed: () {
-                activeMiniPlayer.value = null; // Clear mini player if hosting
+                activeMiniPlayer.value = null;
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => LiveScreen(roomID: 'stream_$userID', isHost: true, userID: userID, userName: userName, hostTitle: '$userName (Host)')),
@@ -360,7 +359,6 @@ class ForYouScreen extends StatelessWidget {
           final s = streamers[i];
           return InkWell(
             onTap: () {
-              // If user is already watching something in mini player, clear it before opening full screen
               activeMiniPlayer.value = null;
               Navigator.push(
                 context,
@@ -435,7 +433,6 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
             subtitle: Text('Status: ${isFemale || widget.isSuperAdmin ? "Verified Host" : "Viewer"}'),
           ),
           const SizedBox(height: 16),
-          // Busy Mode Switch for Host
           SwitchListTile(
             title: const Text('Streamer Busy Mode', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             subtitle: const Text('Show black screen to viewers when busy', style: TextStyle(color: Colors.white54, fontSize: 12)),
@@ -491,4 +488,12 @@ class LiveScreen extends StatelessWidget {
         children: [
           ZegoUIKitPrebuiltLiveStreaming(
             appID: 1576404113,
-     
+            appSign: 'b76540c4974fa2e1ec73787768beaa2c93839634e3e3b33100be649f82662c11',
+            userID: userID,
+            userName: userName,
+            liveID: roomID,
+            config: isHost ? ZegoUIKitPrebuiltLiveStreamingConfig.host() : ZegoUIKitPrebuiltLiveStreamingConfig.audience(),
+          ),
+          SafeArea(
+            child: Padding(
+      
