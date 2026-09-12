@@ -28,7 +28,7 @@ jobs:
       - name: Generate Fresh Modern Android V2 Structure
         run: |
           rm -rf android
-          flutter create --platforms=android --org com.fizzlive .
+          flutter create --platforms=android --org com.fizzlive --project-name fizz_live .
           sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle
           sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle
           sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle
