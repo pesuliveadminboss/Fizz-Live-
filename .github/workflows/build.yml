@@ -37,24 +37,29 @@ jobs:
           find android -name "settings.gradle*" -exec sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "2.1.0"/g' {} + || true
           find android -name "settings.gradle*" -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g' {} + || true
 
-          # Set minSdk to 22
+          # Set minSdk to 22 across Groovy & KTS
           find android/app -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 22/g' {} + || true
           find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 22/g' {} + || true
           find android/app -name "build.gradle*" -exec sed -i 's/minSdk = [0-9]*/minSdk = 22/g' {} + || true
           find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion [0-9]*/minSdkVersion 22/g' {} + || true
 
-          # Android manifest & permissions
+          # Manifest permissions & overrideLibrary
           sed -i 's/<manifest/<manifest xmlns:tools="http:\/\/schemas.android.com\/tools"/g' android/app/src/main/AndroidManifest.xml
           sed -i '/<application/i <uses-sdk tools:overrideLibrary="com.github.rmtmckenzie.native_device_orientation"\/>\n<uses-permission android:name="android.permission.INTERNET"\/>\n<uses-permission android:name="android.permission.CAMERA"\/>\n<uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"\/>' android/app/src/main/AndroidManifest.xml
 
-          # Native FLAG_SECURE injection (Free Screenshot & Screen Record Blocker)
+          # Native FLAG_SECURE (Free Screenshot & Screen Record Blocker)
           find android -name "MainActivity.kt" -exec sed -i 's/import io.flutter.embedding.android.FlutterActivity/import io.flutter.embedding.android.FlutterActivity\nimport android.view.WindowManager\nimport android.os.Bundle/g' {} + || true
           find android -name "MainActivity.kt" -exec sed -i '/class MainActivity/a \    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)\n    }' {} + || true
 
-      - name: Install Packages & Generate App Icon
-        run: |
-          flutter pub get
-          dart run flutter_launcher_icons
+          # Direct Logo Copy to Android Mipmap Folders
+          if [ -f "app_logo.png" ]; then
+            for dir in android/app/src/main/res/mipmap-*; do
+              cp app_logo.png "$dir/ic_launcher.png" || true
+            done
+          fi
+
+      - name: Install Packages
+        run: flutter pub get
 
       - name: Compile Official Signed Release APK
         run: flutter build apk --release --no-tree-shake-icons
@@ -67,7 +72,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           tag_name: v1.0.3-${{ github.run_number }}
-          name: Fizz Live v1.0.3 (Anti-Screenshot, 18+ Gate & Secret Admin Mode)
+          name: Fizz Live v1.0.3 (LiveMe UI, Security & Master Admin Switch)
           draft: false
           prerelease: false
           files: build/app/outputs/flutter-apk/FizzLive.apk
