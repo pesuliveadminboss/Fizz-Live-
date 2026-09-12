@@ -246,7 +246,6 @@ class _MainDashboardState extends State<MainDashboard> {
                       color: Colors.black,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFFF2E93), width: 2),
-                      boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 8)],
                     ),
                     child: Stack(
                       children: [
@@ -260,7 +259,7 @@ class _MainDashboardState extends State<MainDashboard> {
                                     const SizedBox(height: 8),
                                     Text(miniData['hostTitle'], style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                                     const SizedBox(height: 4),
-                                    const Text('STREAMER BUSY', style: TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold)),
+                                    const Text('BUSY', style: TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               )
@@ -496,4 +495,7 @@ class LiveScreen extends StatelessWidget {
           ),
           SafeArea(
             child: Padding(
-      
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+  
