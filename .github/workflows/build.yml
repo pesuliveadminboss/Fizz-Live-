@@ -29,10 +29,31 @@ jobs:
         run: |
           rm -rf android
           flutter create --platforms=android --org com.fizzlive --project-name fizz_live .
-          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle
-          sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle
-          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle
+          
+          # Fix app-level SDK versions
+          sed -i 's/compileSdk = .*/compileSdk = 34/g' android/app/build.gradle || true
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
+          sed -i 's/minSdk = .*/minSdk = 21/g' android/app/build.gradle || true
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle || true
+          sed -i 's/targetSdk = .*/targetSdk = 34/g' android/app/build.gradle || true
+          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
+          
+          # Add permissions to AndroidManifest
           sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET"\/>\n<uses-permission android:name="android.permission.CAMERA"\/>\n<uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"\/>' android/app/src/main/AndroidManifest.xml
+
+          # Force compileSdkVersion 34 across all sub-plugins (fixes file_picker error)
+          cat << 'EOF' >> android/build.gradle
+
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty('android')) {
+                      project.android {
+                          compileSdkVersion 34
+                      }
+                  }
+              }
+          }
+          EOF
 
       - name: Install Packages
         run: flutter pub get
