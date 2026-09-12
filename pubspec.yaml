@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  zego_uikit_prebuilt_live_streaming: ^3.14.3
+  zego_uikit_prebuilt_live_streaming: 3.14.2
   shared_preferences: ^2.2.2
   cupertino_icons: ^1.0.6
 
