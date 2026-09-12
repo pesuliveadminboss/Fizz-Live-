@@ -514,7 +514,7 @@ class FollowGirlsScreen extends StatelessWidget {
 }
 
 // -------------------------------------------------------------
-// 6. GAME DASHBOARD (GEMS BETTING)
+// 6. GAME DASHBOARD
 // -------------------------------------------------------------
 class GameDashboardScreen extends StatelessWidget {
   const GameDashboardScreen({super.key});
@@ -525,4 +525,5 @@ class GameDashboardScreen extends StatelessWidget {
       appBar: AppBar(title: const Text("Game Center")),
       body: ListView(
         padding: const EdgeInsets.all(14),
-        ch
+        children: [
+     
