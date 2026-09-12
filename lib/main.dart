@@ -341,7 +341,7 @@ class LiveRoom extends StatefulWidget {
 
 class _LiveRoomState extends State<LiveRoom> {
   String? giftSplash;
-  final List<String> messages = ['Welcome to live stream!', 'Hello! 👋'];
+  final List<String> messages = ['Welcome!', 'Hello! 👋'];
   final TextEditingController chatController = TextEditingController();
 
   void sendGift(String giftName, int cost) {
@@ -349,9 +349,7 @@ class _LiveRoomState extends State<LiveRoom> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insufficient Gems!')));
       return;
     }
-    if (!widget.isAdmin) {
-      globalUserGems.value -= cost;
-    }
+    if (!widget.isAdmin) globalUserGems.value -= cost;
     Navigator.pop(context);
     setState(() => giftSplash = giftName);
     Future.delayed(const Duration(seconds: 3), () {
@@ -363,42 +361,15 @@ class _LiveRoomState extends State<LiveRoom> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1F1D2B),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            const Text('Send Gift', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                giftItem('🌹 Rose (100)', () => sendGift('🌹 Rose Blast!', 100)),
-                giftItem('🚀 Rocket (500)', () => sendGift('🚀 Mega Rocket!', 500)),
-                giftItem('🏎️ Car (1000)', () => sendGift('🏎️ Sports Car!', 1000)),
-              ],
-            ),
+            ElevatedButton(onPressed: () => sendGift('🌹 Rose Blast!', 100), child: const Text('🌹 Rose (100)')),
+            ElevatedButton(onPressed: () => sendGift('🚀 Mega Rocket!', 500), child: const Text('🚀 Rocket (500)')),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget giftItem(String label, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFF282538), borderRadius: BorderRadius.circular(12)),
-            child: Text(label.split(' ')[0], style: const TextStyle(fontSize: 24)),
-          ),
-          const SizedBox(height: 6),
-          Text(label.split(' ')[1], style: const TextStyle(color: Colors.white, fontSize: 11)),
-        ],
       ),
     );
   }
@@ -440,9 +411,7 @@ class _LiveRoomState extends State<LiveRoom> {
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () {
-                      if (!widget.isHost) {
-                        miniStream.value = {'room': widget.room, 'busy': widget.isBusy};
-                      }
+                      if (!widget.isHost) miniStream.value = {'room': widget.room, 'busy': widget.isBusy};
                       Navigator.pop(context);
                     },
                   ),
@@ -456,17 +425,14 @@ class _LiveRoomState extends State<LiveRoom> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  height: 120, padding: const EdgeInsets.all(8),
+                  height: 100, padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
                   child: ListView.builder(
                     itemCount: messages.length,
-                    itemBuilder: (context, i) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Text(messages[i], style: const TextStyle(color: Colors.white, fontSize: 12)),
-                    ),
+                    itemBuilder: (context, i) => Text(messages[i], style: const TextStyle(color: Colors.white, fontSize: 12)),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Expanded(
@@ -475,8 +441,35 @@ class _LiveRoomState extends State<LiveRoom> {
                         style: const TextStyle(color: Colors.white, fontSize: 12),
                         decoration: InputDecoration(
                           hintText: 'Say something...',
-                          hintStyle: const TextStyle(color: Colors.white54),
                           filled: true, fillColor: Colors.black54,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                
+                        ),
+                      ),
+                    ),
+                    IconButton(icon: const Icon(Icons.send, color: Color(0xFFFF2E93)), onPressed: sendMessage),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (giftSplash != null)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                decoration: BoxDecoration(gradient: const LinearGradient(colors: [Colors.pinkAccent, Colors.purpleAccent]), borderRadius: BorderRadius.circular(30)),
+                child: Text(giftSplash!, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          Positioned(
+            bottom: 24, right: 16,
+            child: FloatingActionButton(
+              mini: true, backgroundColor: const Color(0xFFFF2E93),
+              onPressed: openGiftTray,
+              child: const Icon(Icons.card_giftcard, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
