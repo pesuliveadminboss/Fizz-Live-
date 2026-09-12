@@ -46,7 +46,7 @@ jobs:
           sed -i 's/<manifest/<manifest xmlns:tools="http:\/\/schemas.android.com\/tools"/g' android/app/src/main/AndroidManifest.xml
           sed -i '/<application/i <uses-sdk tools:overrideLibrary="com.github.rmtmckenzie.native_device_orientation"\/>\n<uses-permission android:name="android.permission.INTERNET"\/>\n<uses-permission android:name="android.permission.CAMERA"\/>\n<uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"\/>' android/app/src/main/AndroidManifest.xml
 
-          # Native FLAG_SECURE (Robust MainActivity.kt Generator)
+          # Native FLAG_SECURE (Screenshot Blocker)
           MAIN_DIR=$(dirname $(find android -name "MainActivity.*" | head -n 1))
           rm -f "$MAIN_DIR"/MainActivity.*
           cat << 'KOTLIN_EOF' > "$MAIN_DIR/MainActivity.kt"
@@ -71,7 +71,7 @@ jobs:
             done
           fi
 
-      - name: Write Clean Flutter Code
+      - name: Inject Complete LiveMe Pro System
         run: |
           cat << 'DART_EOF' > lib/main.dart
           import 'dart:math';
@@ -85,7 +85,7 @@ jobs:
             @override
             Widget build(BuildContext context) {
               return MaterialApp(
-                title: 'Fizz Live',
+                title: 'Fizz Live Pro',
                 debugShowCheckedModeBanner: false,
                 theme: ThemeData.dark().copyWith(
                   scaffoldBackgroundColor: const Color(0xFF09080F),
@@ -124,7 +124,7 @@ jobs:
                             const SizedBox(height: 18),
                             const Text('Age Verification Required', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 12),
-                            const Text('Fizz Live contains live entertainment strictly for adults.\nYou must be 18+ to enter.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 13)),
+                            const Text('Fizz Live contains live video streams and chat strictly intended for adults.\nYou must be 18+ to enter.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
                             const SizedBox(height: 24),
                             SizedBox(
                               width: double.infinity,
@@ -147,6 +147,7 @@ jobs:
 
           class FastLoginScreen extends StatelessWidget {
             const FastLoginScreen({super.key});
+
             void _showSecretAdminPrompt(BuildContext context) {
               final pinController = TextEditingController();
               showDialog(
@@ -169,6 +170,8 @@ jobs:
                         Navigator.pop(context);
                         if (pinController.text.trim() == '7777') {
                           Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: true)));
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid Master PIN!')));
                         }
                       },
                       child: const Text('Activate Admin'),
@@ -177,6 +180,7 @@ jobs:
                 ),
               );
             }
+
             @override
             Widget build(BuildContext context) {
               return Scaffold(
@@ -184,7 +188,13 @@ jobs:
                 body: SafeArea(
                   child: Stack(
                     children: [
-                      const Center(child: Icon(Icons.favorite, size: 80, color: Color(0xFFFF2E93))),
+                      Positioned(top: 80, left: 40, child: _bubble(75, Colors.pinkAccent)),
+                      Positioned(top: 60, right: 50, child: _bubble(65, Colors.purpleAccent)),
+                      Positioned(top: 180, left: 130, child: _bubble(85, Colors.amber)),
+                      Positioned(top: 220, right: 30, child: _bubble(75, Colors.cyanAccent)),
+                      Positioned(top: 320, left: 50, child: _bubble(80, Colors.deepOrange)),
+                      Positioned(top: 340, right: 120, child: _bubble(60, Colors.greenAccent)),
+
                       Align(
                         alignment: Alignment.bottomCenter,
                         child: Padding(
@@ -196,7 +206,11 @@ jobs:
                                 width: double.infinity,
                                 height: 50,
                                 child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF2E93),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                                    elevation: 5,
+                                  ),
                                   onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: false))),
                                   child: const Text('Fast Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                                 ),
@@ -204,7 +218,14 @@ jobs:
                               const SizedBox(height: 12),
                               GestureDetector(
                                 onLongPress: () => _showSecretAdminPrompt(context),
-                                child: const Text('Agree to User Agreement and Privacy Policy', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(Icons.check_circle, color: Color(0xFFFF2E93), size: 14),
+                                    SizedBox(width: 6),
+                                    Text('Agree to User Agreement and Privacy Policy', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -213,6 +234,19 @@ jobs:
                     ],
                   ),
                 ),
+              );
+            }
+
+            Widget _bubble(double size, Color color) {
+              return Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withOpacity(0.8), width: 2),
+                  color: const Color(0xFF1E1B2E),
+                ),
+                child: const Icon(Icons.person, color: Colors.white54, size: 36),
               );
             }
           }
@@ -228,14 +262,15 @@ jobs:
             int _currentIndex = 0;
             final String userID = 'user_${Random().nextInt(9000) + 1000}';
             final String userName = 'User_${Random().nextInt(900) + 100}';
+
             @override
             Widget build(BuildContext context) {
               final screens = [
                 ForYouScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
-                Center(child: Text(widget.isSuperAdmin ? 'Admin Stream List' : 'Follow List', style: const TextStyle(color: Colors.white))),
-                Center(child: Text(widget.isSuperAdmin ? 'Admin Betting Controller' : 'Games Hub', style: const TextStyle(color: Colors.white))),
-                const Center(child: Text('Messages & Calls', style: TextStyle(color: Colors.white))),
-                MeProfileScreen(isSuperAdmin: widget.isSuperAdmin),
+                FollowScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
+                const GamesHubScreen(),
+                const MessagesScreen(),
+                MeProfileScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
               ];
               return Scaffold(
                 body: screens[_currentIndex],
@@ -258,136 +293,122 @@ jobs:
             }
           }
 
-          class ForYouScreen extends StatelessWidget {
+          // -------------------------------------------------------------
+          // 1. RICH LIVEME HOME GRID
+          // -------------------------------------------------------------
+          class ForYouScreen extends StatefulWidget {
             final String userID;
             final String userName;
             final bool isSuperAdmin;
             const ForYouScreen({super.key, required this.userID, required this.userName, required this.isSuperAdmin});
             @override
+            State<ForYouScreen> createState() => _ForYouScreenState();
+          }
+
+          class _ForYouScreenState extends State<ForYouScreen> with SingleTickerProviderStateMixin {
+            late TabController _tabController;
+
+            @override
+            void initState() {
+              super.initState();
+              _tabController = TabController(length: 4, vsync: this);
+            }
+
+            @override
             Widget build(BuildContext context) {
               return Scaffold(
                 appBar: AppBar(
-                  title: const Text('Fizz Live Pro', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  title: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white54,
+                    indicatorColor: const Color(0xFFFF2E93),
+                    tabs: const [
+                      Tab(text: 'Hot'),
+                      Tab(text: 'Live'),
+                      Tab(text: 'Party'),
+                      Tab(text: 'Match'),
+                    ],
+                  ),
                   actions: [
-                    if (isSuperAdmin)
+                    if (widget.isSuperAdmin)
                       Container(
-                        margin: const EdgeInsets.only(right: 12),
+                        margin: const EdgeInsets.only(right: 8),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
                         child: const Text('SUPER ADMIN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
                       ),
+                    IconButton(
+                      icon: const Icon(Icons.videocam, color: Color(0xFFFF2E93)),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LiveStreamView(
+                              roomID: 'my_room_${widget.userID}',
+                              isHost: true,
+                              userID: widget.userID,
+                              userName: widget.userName,
+                              hostTitle: widget.userName,
+                              isSuperAdmin: widget.isSuperAdmin,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
-                body: Center(
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.videocam),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93), padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14)),
-                    label: Text(isSuperAdmin ? 'Enter Ghost Monitor Stream' : 'Join Live Stream'),
-                    onPressed: () {
+                body: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildStreamGrid(),
+                    _buildStreamGrid(),
+                    _buildStreamGrid(),
+                    _buildStreamGrid(),
+                  ],
+                ),
+              );
+            }
+
+            Widget _buildStreamGrid() {
+              final streamers = [
+                {'name': 'وردة (Rose)', 'id': 'room_101', 'views': '2.4k', 'tag': 'Exotic', 'color': Colors.purpleAccent},
+                {'name': 'ROPA Live', 'id': 'room_102', 'views': '1.8k', 'tag': 'Singing', 'color': Colors.pinkAccent},
+                {'name': 'Anushka Roy', 'id': 'room_103', 'views': '3.9k', 'tag': 'Top 1', 'color': Colors.deepOrangeAccent},
+                {'name': 'Nilu Star', 'id': 'room_104', 'views': '850', 'tag': 'New', 'color': Colors.blueAccent},
+                {'name': 'Sanya Glow', 'id': 'room_105', 'views': '5.2k', 'tag': 'Dancing', 'color': Colors.tealAccent},
+                {'name': 'Kajal Queen', 'id': 'room_106', 'views': '1.1k', 'tag': 'Chat', 'color': Colors.amberAccent},
+              ];
+
+              return GridView.builder(
+                padding: const EdgeInsets.all(10),
+                itemCount: streamers.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.72,
+                ),
+                itemBuilder: (context, index) {
+                  final s = streamers[index];
+                  return InkWell(
+                    onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => LiveStreamView(roomID: 'room_101', isHost: false, userID: userID, userName: userName, isSuperAdmin: isSuperAdmin),
+                          builder: (context) => LiveStreamView(
+                            roomID: s['id'] as String,
+                            isHost: false,
+                            userID: widget.userID,
+                            userName: widget.userName,
+                            hostTitle: s['name'] as String,
+                            isSuperAdmin: widget.isSuperAdmin,
+                          ),
                         ),
                       );
                     },
-                  ),
-                ),
-              );
-            }
-          }
-
-          class MeProfileScreen extends StatelessWidget {
-            final bool isSuperAdmin;
-            const MeProfileScreen({super.key, required this.isSuperAdmin});
-            @override
-            Widget build(BuildContext context) {
-              return Scaffold(
-                appBar: AppBar(title: const Text('Me Profile')),
-                body: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    ListTile(
-                      leading: const CircleAvatar(backgroundColor: Colors.pink, child: Icon(Icons.person, color: Colors.white)),
-                      title: Text(isSuperAdmin ? 'Super Admin Master' : 'User Account', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      subtitle: Text(isSuperAdmin ? 'Role: Master Controller' : 'Gems: 1,630', style: const TextStyle(color: Colors.white54)),
-                    ),
-                    const Divider(color: Colors.white24),
-                    if (isSuperAdmin) ...[
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(gradient: const LinearGradient(colors: [Colors.redAccent, Colors.deepPurple]), borderRadius: BorderRadius.circular(12)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text('MASTER ADMIN FINANCIALS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            SizedBox(height: 6),
-                            Text('Instant UPI/IMPS Cashout: Ready', style: TextStyle(color: Colors.greenAccent)),
-                            Text('Live Gems Economy: Unlimited', style: TextStyle(color: Colors.amberAccent)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            }
-          }
-
-          class LiveStreamView extends StatelessWidget {
-            final String roomID;
-            final bool isHost;
-            final String userID;
-            final String userName;
-            final bool isSuperAdmin;
-            const LiveStreamView({super.key, required this.roomID, required this.isHost, required this.userID, required this.userName, this.isSuperAdmin = false});
-            @override
-            Widget build(BuildContext context) {
-              return Scaffold(
-                backgroundColor: Colors.black,
-                body: Stack(
-                  children: [
-                    ZegoUIKitPrebuiltLiveStreaming(
-                      appID: 1576404113,
-                      appSign: 'b76540c4974fa2e1ec73787768beaa2c93839634e3e3b33100be649f82662c11',
-                      userID: userID,
-                      userName: isSuperAdmin ? 'System Inspector' : userName,
-                      liveID: roomID,
-                      config: isHost ? ZegoUIKitPrebuiltLiveStreamingConfig.host() : ZegoUIKitPrebuiltLiveStreamingConfig.audience(),
-                    ),
-                    if (isSuperAdmin)
-                      SafeArea(
-                        child: Container(
-                          margin: const EdgeInsets.all(10),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6)),
-                          child: const Text('GHOST MODE ACTIVE', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }
-          }
-          DART_EOF
-
-      - name: Install Packages
-        run: flutter pub get
-
-      - name: Compile Official Signed Release APK
-        run: flutter build apk --release --no-tree-shake-icons
-
-      - name: Rename APK for Distribution
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/FizzLive.apk
-
-      - name: Publish Direct Public Download Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: release-${{ github.run_id }}-${{ github.run_number }}
-          name: Fizz Live (18+ Gate & Anti-Screenshot)
-          draft: false
-          prerelease: false
-          files: build/app/outputs/flutter-apk/FizzLive.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1826),
+                        borde
