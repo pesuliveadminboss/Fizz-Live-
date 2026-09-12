@@ -132,6 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 }
 
 ValueNotifier<Map<String, dynamic>?> miniStream = ValueNotifier<Map<String, dynamic>?>(null);
+ValueNotifier<int> globalUserGems = ValueNotifier<int>(2500);
 
 class Dashboard extends StatefulWidget {
   final String name;
@@ -243,7 +244,7 @@ class HomeTab extends StatelessWidget {
               icon: const Icon(Icons.video_call, color: Color(0xFFFF2E93)),
               onPressed: () {
                 miniStream.value = null;
-                Navigator.push(context, MaterialPageRoute(builder: (context) => LiveRoom(room: 'stream_$uid', isHost: true, uid: uid, name: name, title: '$name (Host)')));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => LiveRoom(room: 'stream_$uid', isHost: true, uid: uid, name: name, title: '$name (Host)', isAdmin: isAdmin)));
               },
             ),
         ],
@@ -257,7 +258,7 @@ class HomeTab extends StatelessWidget {
           return InkWell(
             onTap: () {
               miniStream.value = null;
-              Navigator.push(context, MaterialPageRoute(builder: (context) => LiveRoom(room: r['id']! as String, isHost: false, uid: uid, name: name, title: r['name']! as String, isBusy: r['busy']! as bool)));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => LiveRoom(room: r['id']! as String, isHost: false, uid: uid, name: name, title: r['name']! as String, isBusy: r['busy']! as bool, isAdmin: isAdmin)));
             },
             child: Container(
               decoration: BoxDecoration(color: const Color(0xFF1E1B2E), borderRadius: BorderRadius.circular(14)),
@@ -295,6 +296,27 @@ class ProfileTab extends StatelessWidget {
               title: Text(isAdmin ? 'Admin Master' : name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               subtitle: Text('Gender: $gender'),
             ),
+            const SizedBox(height: 20),
+            ValueListenableBuilder<int>(
+              valueListenable: globalUserGems,
+              builder: (context, gems, child) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: const Color(0xFF221E38), borderRadius: BorderRadius.circular(12)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(isAdmin ? 'Gems: UNLIMITED' : 'Gems: $gems', style: const TextStyle(color: Colors.cyanAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93)),
+                        onPressed: () => globalUserGems.value += 500,
+                        child: const Text('Top Up'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -302,15 +324,82 @@ class ProfileTab extends StatelessWidget {
   }
 }
 
-class LiveRoom extends StatelessWidget {
+class LiveRoom extends StatefulWidget {
   final String room;
   final bool isHost;
   final String uid;
   final String name;
   final String title;
   final bool isBusy;
+  final bool isAdmin;
 
-  const LiveRoom({super.key, required this.room, required this.isHost, required this.uid, required this.name, this.title = 'Live', this.isBusy = false});
+  const LiveRoom({super.key, required this.room, required this.isHost, required this.uid, required this.name, this.title = 'Live', this.isBusy = false, required this.isAdmin});
+
+  @override
+  State<LiveRoom> createState() => _LiveRoomState();
+}
+
+class _LiveRoomState extends State<LiveRoom> {
+  String? giftSplash;
+
+  void sendGift(String giftName, int cost) {
+    if (!widget.isAdmin && globalUserGems.value < cost) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insufficient Gems! Please Top Up')));
+      return;
+    }
+    if (!widget.isAdmin) {
+      globalUserGems.value -= cost;
+    }
+    Navigator.pop(context);
+    setState(() => giftSplash = giftName);
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) setState(() => giftSplash = null);
+    });
+  }
+
+  void openGiftTray() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F1D2B),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Send Gift', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                giftItem('🌹 Rose (100)', () => sendGift('🌹 Rose Blast!', 100)),
+                giftItem('🚀 Rocket (500)', () => sendGift('🚀 Mega Rocket!', 500)),
+                giftItem('🏎️ Car (1000)', () => sendGift('🏎️ Sports Car!', 1000)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget giftItem(String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: const Color(0xFF282538), borderRadius: BorderRadius.circular(12)),
+            child: Text(label.split(' ')[0], style: const TextStyle(fontSize: 24)),
+          ),
+          const SizedBox(height: 6),
+          Text(label.split(' ')[1], style: const TextStyle(color: Colors.white, fontSize: 11)),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -321,10 +410,10 @@ class LiveRoom extends StatelessWidget {
           ZegoUIKitPrebuiltLiveStreaming(
             appID: 1576404113,
             appSign: 'b76540c4974fa2e1ec73787768beaa2c93839634e3e3b33100be649f82662c11',
-            userID: uid,
-            userName: name,
-            liveID: room,
-            config: isHost ? ZegoUIKitPrebuiltLiveStreamingConfig.host() : ZegoUIKitPrebuiltLiveStreamingConfig.audience(),
+            userID: widget.uid,
+            userName: widget.name,
+            liveID: widget.room,
+            config: widget.isHost ? ZegoUIKitPrebuiltLiveStreamingConfig.host() : ZegoUIKitPrebuiltLiveStreamingConfig.audience(),
           ),
           SafeArea(
             child: Padding(
@@ -334,20 +423,40 @@ class LiveRoom extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(15)),
-                    child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: Text(widget.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () {
-                      if (!isHost) {
-                        miniStream.value = {'room': room, 'busy': isBusy};
+                      if (!widget.isHost) {
+                        miniStream.value = {'room': widget.room, 'busy': widget.isBusy};
                       }
                       Navigator.pop(context);
                     },
                   ),
                 ],
               ),
+            ),
+          ),
+          if (giftSplash != null)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Colors.pinkAccent, Colors.purpleAccent]),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Text(giftSplash!, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          Positioned(
+            bottom: 24, right: 16,
+            child: FloatingActionButton(
+              mini: true,
+              backgroundColor: const Color(0xFFFF2E93),
+              onPressed: openGiftTray,
+              child: const Icon(Icons.card_giftcard, color: Colors.white),
             ),
           ),
         ],
