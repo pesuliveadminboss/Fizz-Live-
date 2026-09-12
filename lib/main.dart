@@ -341,6 +341,8 @@ class LiveRoom extends StatefulWidget {
 
 class _LiveRoomState extends State<LiveRoom> {
   String? giftSplash;
+  final List<String> messages = ['Welcome to the live stream!', 'Hello everyone! 👋'];
+  final TextEditingController chatController = TextEditingController();
 
   void sendGift(String giftName, int cost) {
     if (!widget.isAdmin && globalUserGems.value < cost) {
@@ -401,6 +403,15 @@ class _LiveRoomState extends State<LiveRoom> {
     );
   }
 
+  void sendMessage() {
+    if (chatController.text.trim().isNotEmpty) {
+      setState(() {
+        messages.add('${widget.name}: ${chatController.text.trim()}');
+        chatController.clear();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -439,28 +450,37 @@ class _LiveRoomState extends State<LiveRoom> {
               ),
             ),
           ),
-          if (giftSplash != null)
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Colors.pinkAccent, Colors.purpleAccent]),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Text(giftSplash!, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-            ),
+          // Live Chat Messages & Input Box at Bottom Left
           Positioned(
-            bottom: 24, right: 16,
-            child: FloatingActionButton(
-              mini: true,
-              backgroundColor: const Color(0xFFFF2E93),
-              onPressed: openGiftTray,
-              child: const Icon(Icons.card_giftcard, color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+            bottom: 70,
+            left: 12,
+            right: 80,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 120,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
+                  child: ListView.builder(
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(messages[index], style: const TextStyle(color: Colors.white, fontSize: 12, shadows: [Shadow(color: Colors.black, blurRadius: 2)])),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: chatController,
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                        decoration: InputDecoration(
+                          hintText: 'Say something...',
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          filled: true,
+                  
