@@ -58,24 +58,361 @@ jobs:
             done
           fi
 
-      - name: Install Packages
-        run: flutter pub get
+      - name: Generate Complete Clean main.dart
+        run: |
+          cat << 'EOF' > lib/main.dart
+          import 'dart:math';
+          import 'package:flutter/material.dart';
+          import 'package:shared_preferences/shared_preferences.dart';
+          import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
-      - name: Compile Official Signed Release APK
-        run: flutter build apk --release --no-tree-shake-icons
+          void main() async {
+            WidgetsFlutterBinding.ensureInitialized();
+            runApp(const FizzLiveApp());
+          }
 
-      - name: Rename APK for Distribution
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/FizzLive.apk
+          class FizzLiveApp extends StatelessWidget {
+            const FizzLiveApp({super.key});
 
-      - name: Publish Direct Public Download Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        with:
-          tag_name: v1.0.3-${{ github.run_number }}
-          name: Fizz Live v1.0.3 (LiveMe UI, Security & Master Admin Switch)
-          draft: false
-          prerelease: false
-          files: build/app/outputs/flutter-apk/FizzLive.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+            @override
+            Widget build(BuildContext context) {
+              return MaterialApp(
+                title: 'Fizz Live',
+                debugShowCheckedModeBanner: false,
+                theme: ThemeData.dark().copyWith(
+                  scaffoldBackgroundColor: const Color(0xFF09080F),
+                  appBarTheme: const AppBarTheme(
+                    backgroundColor: Color(0xFF09080F),
+                    elevation: 0,
+                  ),
+                ),
+                home: const AgeVerificationGate(),
+              );
+            }
+          }
+
+          class AgeVerificationGate extends StatefulWidget {
+            const AgeVerificationGate({super.key});
+
+            @override
+            State<AgeVerificationGate> createState() => _AgeVerificationGateState();
+          }
+
+          class _AgeVerificationGateState extends State<AgeVerificationGate> {
+            @override
+            void initState() {
+              super.initState();
+              _checkAgeGate();
+            }
+
+            void _checkAgeGate() async {
+              final prefs = await SharedPreferences.getInstance();
+              final bool isVerified = prefs.getBool('age_verified_18') ?? false;
+              if (isVerified) {
+                _goToLogin();
+              }
+            }
+
+            void _goToLogin() {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const FastLoginScreen()),
+              );
+            }
+
+            void _confirmAge() async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('age_verified_18', true);
+              _goToLogin();
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                backgroundColor: const Color(0xFF0D0C13),
+                body: SafeArea(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B1926),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFFF2E93), width: 1.5),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFFFF2E93).withOpacity(0.15),
+                              ),
+                              child: const Text("18+", style: TextStyle(color: Color(0xFFFF2E93), fontSize: 32, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(height: 18),
+                            const Text("Age Verification Required", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 12),
+                            const Text(
+                              "Fizz Live contains live streaming, video chat and entertainment intended strictly for adults.\n\nYou must be 18 years or older to enter.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF2E93),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                                ),
+                                onPressed: _confirmAge,
+                                child: const Text("I Am 18 or Older - Enter", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          }
+
+          class FastLoginScreen extends StatelessWidget {
+            const FastLoginScreen({super.key});
+
+            void _showSecretAdminPrompt(BuildContext context) {
+              final pinController = TextEditingController();
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFF1F1D2B),
+                  title: const Text("Super Admin Verification", style: TextStyle(color: Colors.white)),
+                  content: TextField(
+                    controller: pinController,
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: "Enter 4-Digit Master PIN",
+                      labelStyle: const TextStyle(color: Colors.grey),
+                      enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.pinkAccent), borderRadius: BorderRadius.circular(10)),
+                      focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.purpleAccent), borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel", style: TextStyle(color: Colors.grey))),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2E93)),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        if (pinController.text.trim() == "7777") {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: true)),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Invalid PIN!")),
+                          );
+                        }
+                      },
+                      child: const Text("Activate Admin Mode"),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                backgroundColor: Colors.black,
+                body: SafeArea(
+                  child: Stack(
+                    children: [
+                      Positioned(top: 80, left: 40, child: _bubble(75, Colors.pinkAccent)),
+                      Positioned(top: 60, right: 50, child: _bubble(65, Colors.purpleAccent)),
+                      Positioned(top: 180, left: 130, child: _bubble(85, Colors.amber)),
+                      Positioned(top: 220, right: 30, child: _bubble(75, Colors.cyanAccent)),
+                      Positioned(top: 320, left: 50, child: _bubble(80, Colors.deepOrange)),
+                      Positioned(top: 340, right: 120, child: _bubble(60, Colors.greenAccent)),
+
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF2E93),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                                    elevation: 5,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const MainDashboard(isSuperAdmin: false)),
+                                    );
+                                  },
+                                  child: const Text("Fast Login", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              const Text("Already a member? Login", style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 12),
+                              GestureDetector(
+                                onLongPress: () => _showSecretAdminPrompt(context),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(Icons.check_circle, color: Color(0xFFFF2E93), size: 14),
+                                    SizedBox(width: 6),
+                                    Text("Agree to User Agreement and Privacy Policy", style: TextStyle(color: Colors.white38, fontSize: 11)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            Widget _bubble(double size, Color color) {
+              return Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withOpacity(0.8), width: 2),
+                  color: const Color(0xFF1E1B2E),
+                ),
+                child: const Icon(Icons.person, color: Colors.white54, size: 36),
+              );
+            }
+          }
+
+          class MainDashboard extends StatefulWidget {
+            final bool isSuperAdmin;
+            const MainDashboard({super.key, this.isSuperAdmin = false});
+
+            @override
+            State<MainDashboard> createState() => _MainDashboardState();
+          }
+
+          class _MainDashboardState extends State<MainDashboard> {
+            int _currentIndex = 0;
+            final String userID = "user_${Random().nextInt(9000) + 1000}";
+            final String userName = "User_${Random().nextInt(900) + 100}";
+
+            @override
+            Widget build(BuildContext context) {
+              final screens = [
+                ForYouHomeScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
+                FollowGirlsScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
+                const GameDashboardScreen(),
+                const MessagesListScreen(),
+                MeProfileScreen(userID: userID, userName: userName, isSuperAdmin: widget.isSuperAdmin),
+              ];
+
+              return Scaffold(
+                body: screens[_currentIndex],
+                bottomNavigationBar: BottomNavigationBar(
+                  currentIndex: _currentIndex,
+                  onTap: (index) => setState(() => _currentIndex = index),
+                  backgroundColor: const Color(0xFF0F0E17),
+                  selectedItemColor: const Color(0xFFFF2E93),
+                  unselectedItemColor: Colors.white38,
+                  type: BottomNavigationBarType.fixed,
+                  items: const [
+                    BottomNavigationBarItem(icon: Icon(Icons.thumb_up_alt_outlined), label: "For You"),
+                    BottomNavigationBarItem(icon: Icon(Icons.group_outlined), label: "Follow"),
+                    BottomNavigationBarItem(icon: Icon(Icons.sports_esports_outlined), label: "Game"),
+                    BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: "Messages"),
+                    BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Me"),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class ForYouHomeScreen extends StatefulWidget {
+            final String userID;
+            final String userName;
+            final bool isSuperAdmin;
+
+            const ForYouHomeScreen({super.key, required this.userID, required this.userName, required this.isSuperAdmin});
+
+            @override
+            State<ForYouHomeScreen> createState() => _ForYouHomeScreenState();
+          }
+
+          class _ForYouHomeScreenState extends State<ForYouHomeScreen> with SingleTickerProviderStateMixin {
+            late TabController _tabController;
+
+            @override
+            void initState() {
+              super.initState();
+              _tabController = TabController(length: 4, vsync: this);
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(
+                  title: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white54,
+                    indicatorColor: const Color(0xFFFF2E93),
+                    tabs: const [
+                      Tab(text: "Hot"),
+                      Tab(text: "Live"),
+                      Tab(text: "Party"),
+                      Tab(text: "Match"),
+                    ],
+                  ),
+                  actions: [
+                    if (widget.isSuperAdmin)
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(10)),
+                        child: const Text("SUPER ADMIN", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
+                    IconButton(icon: const Icon(Icons.search, color: Colors.white), onPressed: () {}),
+                  ],
+                ),
+                body: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildHotGrid(),
+                    _buildHotGrid(),
+                    PartyRoomScreen(userID: widget.userID, userName: widget.userName, isSuperAdmin: widget.isSuperAdmin),
+                    MatchScreen(userID: widget.userID, userName: widget.userName, isSuperAdmin: widget.isSuperAdmin),
+                  ],
+                ),
+              );
+            }
+
+            Widget _buildHotGrid() {
+              final list = [
+                {"name": "وردة", "id": "1001", "status": "Online", "tag": "Exotic"},
+                {"name": "ROPA", "id": "1002", "status": "Online", "tag": ""},
+                {"name": "Anushka", "id": "1003", "status": "Live", "tag": "Your Follow"},
+                {"name": "nilu roy", "id": "1004", "status": "
