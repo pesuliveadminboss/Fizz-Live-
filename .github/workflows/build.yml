@@ -33,9 +33,14 @@ jobs:
           # Force Kotlin 2.1.0 in settings.gradle
           sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g' android/settings.gradle || true
 
-          # Set Android SDK versions (minSdk 22 required by native_device_orientation)
-          sed -i 's/compileSdk = .*/compileSdk = 34/g' android/app/build.gradle || true
+          # Direct replacement for minSdk to 22 (handling both legacy and flutter.minSdkVersion syntax)
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 22/g' android/app/build.gradle || true
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 22/g' android/app/build.gradle || true
           sed -i 's/minSdk = .*/minSdk = 22/g' android/app/build.gradle || true
+          sed -i 's/minSdkVersion [0-9]*/minSdkVersion 22/g' android/app/build.gradle || true
+
+          # Set compile and target SDK to 34
+          sed -i 's/compileSdk = .*/compileSdk = 34/g' android/app/build.gradle || true
           sed -i 's/targetSdk = .*/targetSdk = 34/g' android/app/build.gradle || true
 
           # Inject permissions
