@@ -30,21 +30,19 @@ jobs:
           rm -rf android
           flutter create --platforms=android --org com.fizzlive --project-name fizz_live .
           
-          # Force Kotlin 2.1.0 in settings.gradle
-          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g' android/settings.gradle || true
+          # Force Kotlin 2.1.0 in settings.gradle / settings.gradle.kts
+          find android -name "settings.gradle*" -exec sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "2.1.0"/g' {} + || true
+          find android -name "settings.gradle*" -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g' {} + || true
 
-          # Direct replacement for minSdk to 22 (handling both legacy and flutter.minSdkVersion syntax)
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 22/g' android/app/build.gradle || true
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 22/g' android/app/build.gradle || true
-          sed -i 's/minSdk = .*/minSdk = 22/g' android/app/build.gradle || true
-          sed -i 's/minSdkVersion [0-9]*/minSdkVersion 22/g' android/app/build.gradle || true
+          # Update minSdk to 22 across both Groovy and KTS build files
+          find android/app -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 22/g' {} + || true
+          find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 22/g' {} + || true
+          find android/app -name "build.gradle*" -exec sed -i 's/minSdk = [0-9]*/minSdk = 22/g' {} + || true
+          find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion [0-9]*/minSdkVersion 22/g' {} + || true
 
-          # Set compile and target SDK to 34
-          sed -i 's/compileSdk = .*/compileSdk = 34/g' android/app/build.gradle || true
-          sed -i 's/targetSdk = .*/targetSdk = 34/g' android/app/build.gradle || true
-
-          # Inject permissions
-          sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET"\/>\n<uses-permission android:name="android.permission.CAMERA"\/>\n<uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"\/>' android/app/src/main/AndroidManifest.xml
+          # Inject permissions and overrideLibrary to bypass any minSdkVersion merge block
+          sed -i 's/<manifest/<manifest xmlns:tools="http:\/\/schemas.android.com\/tools"/g' android/app/src/main/AndroidManifest.xml
+          sed -i '/<application/i <uses-sdk tools:overrideLibrary="com.github.rmtmckenzie.native_device_orientation"\/>\n<uses-permission android:name="android.permission.INTERNET"\/>\n<uses-permission android:name="android.permission.CAMERA"\/>\n<uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"\/>' android/app/src/main/AndroidManifest.xml
 
       - name: Install Packages
         run: flutter pub get
