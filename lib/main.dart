@@ -192,6 +192,9 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 }
 
+// GLOBAL CONTROLLER FOR MINI-PLAYER PIP
+ValueNotifier<Map<String, dynamic>?> activeMiniPlayer = ValueNotifier<Map<String, dynamic>?>(null);
+
 class MainDashboard extends StatefulWidget {
   final String userName;
   final String gender;
@@ -219,7 +222,81 @@ class _MainDashboardState extends State<MainDashboard> {
     ];
 
     return Scaffold(
-      body: screens[_idx],
+      body: Stack(
+        children: [
+          IndexedStack(index: _idx, children: screens),
+          // FLOATING MINI-PLAYER (BOTTOM RIGHT MINI WINDOW)
+          ValueListenableBuilder<Map<String, dynamic>?>(
+            valueListenable: activeMiniPlayer,
+            builder: (context, miniData, child) {
+              if (miniData == null) return const SizedBox.shrink();
+              return Positioned(
+                bottom: 65,
+                right: 12,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 150,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFF2E93), width: 2),
+                      boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 8)],
+                    ),
+                    child: Stack(
+                      children: [
+                        // If Streamer is Busy, show Black Screen with Busy notice
+                        if (miniData['isBusy'] == true)
+                          Container(
+                            color: Colors.black,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.do_not_disturb_on, color: Colors.redAccent, size: 36),
+                                const SizedBox(height: 8),
+                                Text(miniData['hostTitle'], style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                                const SizedBox(height: 4),
+                                const Text('STREAMER BUSY', style: TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          )
+                        else
+                        // Audio-Only / Video Mini Stream
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: ZegoUIKitPrebuiltLiveStreaming(
+                              appID: 1576404113,
+                              appSign: 'b76540c4974fa2e1ec73787768beaa2c93839634e3e3b33100be649f82662c11',
+                              userID: miniData['userID'],
+                              userName: miniData['userName'],
+                              liveID: miniData['roomID'],
+                              config: ZegoUIKitPrebuiltLiveStreamingConfig.audience(),
+                            ),
+                          ),
+
+                        // Top Close (X) button for Mini Player
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => activeMiniPlayer.value = null,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                              child: const Icon(Icons.close, color: Colors.white, size: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _idx,
         onTap: (i) => setState(() => _idx = i),
@@ -251,6 +328,13 @@ class ForYouScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool canStream = isSuperAdmin || gender.toLowerCase() == 'female';
 
+    final streamers = [
+      {'name': 'Rose Live', 'id': 'room_101', 'busy': false},
+      {'name': 'Anushka (Busy)', 'id': 'room_102', 'busy': true},
+      {'name': 'Sanya Glow', 'id': 'room_103', 'busy': false},
+      {'name': 'Kajal Queen', 'id': 'room_104', 'busy': false},
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fizz Live Pro'),
@@ -259,9 +343,10 @@ class ForYouScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.video_call, color: Color(0xFFFF2E93), size: 30),
               onPressed: () {
+                activeMiniPlayer.value = null; // Clear mini player if hosting
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => LiveScreen(roomID: 'stream_$userID', isHost: true, userID: userID, userName: userName)),
+                  MaterialPageRoute(builder: (context) => LiveScreen(roomID: 'stream_$userID', isHost: true, userID: userID, userName: userName, hostTitle: '$userName (Host)')),
                 );
               },
             ),
@@ -269,15 +354,26 @@ class ForYouScreen extends StatelessWidget {
       ),
       body: GridView.builder(
         padding: const EdgeInsets.all(10),
-        itemCount: 4,
+        itemCount: streamers.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 0.8),
         itemBuilder: (context, i) {
-          final room = 'room_10$i';
+          final s = streamers[i];
           return InkWell(
             onTap: () {
+              // If user is already watching something in mini player, clear it before opening full screen
+              activeMiniPlayer.value = null;
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => LiveScreen(roomID: room, isHost: false, userID: userID, userName: userName)),
+                MaterialPageRoute(
+                  builder: (context) => LiveScreen(
+                    roomID: s['id']! as String,
+                    isHost: false,
+                    userID: userID,
+                    userName: userName,
+                    hostTitle: s['name']! as String,
+                    isBusy: s['busy']! as bool,
+                  ),
+                ),
               );
             },
             child: Container(
@@ -285,7 +381,19 @@ class ForYouScreen extends StatelessWidget {
               child: Stack(
                 children: [
                   const Center(child: Icon(Icons.person, size: 60, color: Colors.white24)),
-                  Positioned(bottom: 10, left: 10, child: Text('Model #$i', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                  Positioned(
+                    bottom: 10,
+                    left: 10,
+                    right: 10,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(s['name']! as String, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        if (s['busy'] == true)
+                          const Text('BUSY', style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -310,6 +418,7 @@ class MeProfileScreen extends StatefulWidget {
 
 class _MeProfileScreenState extends State<MeProfileScreen> {
   int gems = 2500;
+  bool isBusyMode = false;
 
   @override
   Widget build(BuildContext context) {
@@ -323,7 +432,16 @@ class _MeProfileScreenState extends State<MeProfileScreen> {
           ListTile(
             leading: CircleAvatar(backgroundColor: isFemale ? Colors.pink : Colors.blue, child: Icon(isFemale ? Icons.female : Icons.male, color: Colors.white)),
             title: Text(widget.isSuperAdmin ? 'Super Admin Master' : widget.userName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            subtitle: Text('Status: ${isFemale || widget.isSuperAdmin ? "Verified Host" : "Viewer (No Stream)"}'),
+            subtitle: Text('Status: ${isFemale || widget.isSuperAdmin ? "Verified Host" : "Viewer"}'),
+          ),
+          const SizedBox(height: 16),
+          // Busy Mode Switch for Host
+          SwitchListTile(
+            title: const Text('Streamer Busy Mode', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            subtitle: const Text('Show black screen to viewers when busy', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            value: isBusyMode,
+            activeColor: Colors.redAccent,
+            onChanged: (val) => setState(() => isBusyMode = val),
           ),
           const SizedBox(height: 16),
           Container(
@@ -352,22 +470,25 @@ class LiveScreen extends StatelessWidget {
   final bool isHost;
   final String userID;
   final String userName;
+  final String hostTitle;
+  final bool isBusy;
 
-  const LiveScreen({super.key, required this.roomID, required this.isHost, required this.userID, required this.userName});
+  const LiveScreen({
+    super.key,
+    required this.roomID,
+    required this.isHost,
+    required this.userID,
+    required this.userName,
+    this.hostTitle = 'Live Stream',
+    this.isBusy = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: ZegoUIKitPrebuiltLiveStreaming(
-        appID: 1576404113,
-        appSign: 'b76540c4974fa2e1ec73787768beaa2c93839634e3e3b33100be649f82662c11',
-        userID: userID,
-        userName: userName,
-        liveID: roomID,
-        config: isHost ? ZegoUIKitPrebuiltLiveStreamingConfig.host() : ZegoUIKitPrebuiltLiveStreamingConfig.audience(),
-      ),
-    );
-  }
-}
-
+      body: Stack(
+        children: [
+          ZegoUIKitPrebuiltLiveStreaming(
+            appID: 1576404113,
+     
