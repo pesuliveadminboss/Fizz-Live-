@@ -195,12 +195,12 @@ class ForYouScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final streamers = [
-      {'name': 'وردة (Rose)', 'id': 'room_101', 'views': '2.4k', 'tag': 'Hot'},
-      {'name': 'ROPA Live', 'id': 'room_102', 'views': '1.8k', 'tag': 'Live'},
-      {'name': 'Anushka Roy', 'id': 'room_103', 'views': '3.9k', 'tag': 'Top 1'},
-      {'name': 'Nilu Star', 'id': 'room_104', 'views': '850', 'tag': 'New'},
-      {'name': 'Sanya Glow', 'id': 'room_105', 'views': '5.2k', 'tag': 'Model'},
-      {'name': 'Kajal Queen', 'id': 'room_106', 'views': '1.1k', 'tag': 'Chat'},
+      {'name': 'وردة (Rose)', 'id': 'room_101', 'tag': 'Hot'},
+      {'name': 'ROPA Live', 'id': 'room_102', 'tag': 'Live'},
+      {'name': 'Anushka Roy', 'id': 'room_103', 'tag': 'Top 1'},
+      {'name': 'Nilu Star', 'id': 'room_104', 'tag': 'New'},
+      {'name': 'Sanya Glow', 'id': 'room_105', 'tag': 'Model'},
+      {'name': 'Kajal Queen', 'id': 'room_106', 'tag': 'Chat'},
     ];
 
     return Scaffold(
@@ -495,4 +495,6 @@ class _LiveStreamViewState extends State<LiveStreamView> {
             userID: widget.userID,
             userName: widget.isSuperAdmin ? 'System Inspector' : widget.userName,
             liveID: widget.roomID,
-            config: wid
+            config: widget.isHost
+                ? ZegoUIKitPrebuiltLiveStreamingConfig.host()
+                : ZegoUIKitP
