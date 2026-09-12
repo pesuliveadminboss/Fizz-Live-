@@ -159,14 +159,12 @@ class _DashboardState extends State<Dashboard> {
 
   void _loadBannerAd() {
     _bannerAd = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111', // Google Test Ad ID (Safe for testing)
+      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (_) => setState(() => _isAdLoaded = true),
-        onAdFailedToLoad: (ad, err) {
-          ad.dispose();
-        },
+        onAdFailedToLoad: (ad, err) => ad.dispose(),
       ),
     )..load();
   }
@@ -278,7 +276,7 @@ class HomeTab extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fizz Live Pro (Ad Monetized)'),
+        title: const Text('Fizz Live Pro (Monetized)'),
         actions: [
           if (canGoLive)
             IconButton(
@@ -384,28 +382,20 @@ class _LiveRoomState extends State<LiveRoom> {
   String? giftSplash;
   final List<String> messages = ['Welcome!', 'Hello! 👋'];
   final TextEditingController chatController = TextEditingController();
-  InterstitialAd? _interstitialAd;
 
   @override
   void initState() {
     super.initState();
     if (!widget.isHost) {
-      _loadInterstitialAd();
+      InterstitialAd.load(
+        adUnitId: 'ca-app-pub-3940256099942544/1033173712',
+        request: const AdRequest(),
+        adLoadCallback: InterstitialAdLoadCallback(
+          onAdLoaded: (ad) => ad.show(),
+          onAdFailedToLoad: (err) {},
+        ),
+      );
     }
-  }
-
-  void _loadInterstitialAd() {
-    InterstitialAd.load(
-      adUnitId: 'ca-app-pub-3940256099942544/1033173712', // Google Test Interstitial ID
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAd = ad;
-          _interstitialAd?.show(); // Show ad when entering live room
-        },
-        onAdFailedToLoad: (err) {},
-      ),
-    );
   }
 
   void sendGift(String giftName, int cost) {
@@ -502,4 +492,8 @@ class _LiveRoomState extends State<LiveRoom> {
                     Expanded(
                       child: TextField(
                         controller: chatController,
-                        style: const TextStyle(color: Colors.white, fontSize: 1
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                        decoration: InputDecoration(
+                          hintText: 'Say something...',
+                          filled: true, fillColor: Colors.black54,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borde
