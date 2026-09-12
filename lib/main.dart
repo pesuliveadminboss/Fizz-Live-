@@ -154,10 +154,6 @@ class _DashboardState extends State<Dashboard> {
   @override
   void initState() {
     super.initState();
-    _loadBannerAd();
-  }
-
-  void _loadBannerAd() {
     _bannerAd = BannerAd(
       adUnitId: 'ca-app-pub-3940256099942544/6300978111',
       size: AdSize.banner,
@@ -500,4 +496,4 @@ class _LiveRoomState extends State<LiveRoom> {
                         ),
                       ),
                     ),
-    
+                    IconButton(icon: const Icon(Icons.s
