@@ -25,15 +25,34 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Recreate Clean Android Project & Configure SDK 34
+      - name: Recreate Clean Android Project & Force SDK 34
         run: |
           flutter create . --platforms android
           flutter pub get
-          # Set compileSdk and targetSdk to 34 to satisfy AndroidX dependencies
-          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle || true
-          sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle || true
-          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 34/g' android/app/build.gradle || true
-          sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 34/g' android/app/build.gradle || true
+
+          # Force compileSdk and targetSdk 34 globally for all plugins
+          cat << 'EOF' >> android/app/build.gradle
+
+          android {
+              compileSdkVersion 34
+              defaultConfig {
+                  targetSdkVersion 34
+              }
+          }
+          EOF
+
+          cat << 'EOF' >> android/build.gradle
+
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty("android")) {
+                      android {
+                          compileSdkVersion 34
+                      }
+                  }
+              }
+          }
+          EOF
 
       - name: Auto-Inject App Logo to Android Icons
         run: |
