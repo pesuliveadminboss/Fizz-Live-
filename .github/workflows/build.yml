@@ -60,8 +60,7 @@ jobs:
           if [ -f "logo.png" ]; then
             echo "Found logo.png, generating icons..."
             sudo apt-get update && sudo apt-get install -y imagemagick
-            
-            # Create all mipmap directories
+
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$dir
             done
@@ -72,25 +71,32 @@ jobs:
             convert logo.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
             convert logo.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
-            # Round icons
             convert logo.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
             convert logo.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
             convert logo.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
             convert logo.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
             convert logo.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
-            # Remove adaptive vector to ensure PNG icon is picked up
+            # Remove vector xml to force png icon
             rm -rf android/app/src/main/res/mipmap-anydpi-v26
-            echo "Icons replaced successfully!"
           fi
 
-      - name: Compile Official Flutter Release APK
+      - name: Compile Official Signed Release APK Direct
         run: |
-          flutter build apk --release --no-tree-shake-icons
+          # Build flutter dart assets first so app will never white-screen/crash
+          flutter build bundle
 
-      - name: Rename APK for Distribution
+          # Compile direct via Gradle
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+          cd ..
+
+      - name: Locate and Rename Release APK
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk Fizz-Live-Release.apk
+          FOUND_APK=$(find . -type f -name "*release*.apk" | head -n 1)
+          echo "Found APK at: $FOUND_APK"
+          cp "$FOUND_APK" Fizz-Live-Release.apk
 
       - name: Publish Direct Public Download Release
         uses: softprops/action-gh-release@v1
