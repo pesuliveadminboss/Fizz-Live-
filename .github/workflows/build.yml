@@ -25,22 +25,36 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Recreate Android Project & Enforce SDK 36
+      - name: Recreate Android Project & Globally Enforce SDK 35
         run: |
           rm -rf android
           flutter create . --platforms android
           flutter pub get
 
-          # Check whether it's build.gradle or build.gradle.kts and update SDK to 36
+          # 1. Update app level build.gradle / build.gradle.kts
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
-              echo "Updating $file to compileSdk 36..."
-              sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
-              sed -i 's/targetSdk\s*=\s*flutter.targetSdkVersion/targetSdk = 36/g' "$file" || true
-              sed -i 's/compileSdkVersion\s\+flutter.compileSdkVersion/compileSdkVersion 36/g' "$file" || true
-              sed -i 's/targetSdkVersion\s\+flutter.targetSdkVersion/targetSdkVersion 36/g' "$file" || true
+              echo "Patching $file..."
+              sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 35/g' "$file" || true
+              sed -i 's/targetSdk\s*=\s*flutter.targetSdkVersion/targetSdk = 35/g' "$file" || true
+              sed -i 's/compileSdkVersion\s\+flutter.compileSdkVersion/compileSdkVersion 35/g' "$file" || true
+              sed -i 's/targetSdkVersion\s\+flutter.targetSdkVersion/targetSdkVersion 35/g' "$file" || true
             fi
           done
+
+          # 2. Inject global subproject override for all plugins (including ZegoUIKit)
+          cat << 'EOF' >> android/build.gradle
+
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty("android")) {
+                      project.android {
+                          compileSdkVersion 35
+                      }
+                  }
+              }
+          }
+          EOF
 
       - name: Auto-Inject App Logo to Android Icons
         run: |
