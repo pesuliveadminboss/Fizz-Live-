@@ -2,10 +2,8 @@ name: Build and Release Fizz Live APK
 
 on:
   push:
+    branches: [ main, master ]
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build:
@@ -24,67 +22,52 @@ jobs:
       - name: Setup Flutter Engine Stable
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0'
           channel: 'stable'
+          cache: true
 
-      - name: Recreate Clean Android Project & Add Ads
+      - name: Recreate Clean Android Project & Configure
         run: |
-          rm -rf android
-          flutter create --platforms=android --org com.fizzlive --project-name fizz_live .
-          
-          # Automatically inject google_mobile_ads into pubspec.yaml safely
-          sed -i '/zego_uikit_prebuilt_live_streaming: ^3.15.6/a \  google_mobile_ads: ^5.2.0' pubspec.yaml
+          flutter create . --platforms android
+          flutter pub get
 
-          # Kotlin 2.1.0 dependency lock
-          find android -name "settings.gradle*" -exec sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "2.1.0"/g' {} + || true
-          find android -name "settings.gradle*" -exec sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.1.0"/g' {} + || true
+      - name: Auto-Inject App Logo to Android Icons
+        run: |
+          if [ -f "logo.png" ]; then
+            echo "Found logo.png, replacing Android app launcher icons..."
+            sudo apt-get update && sudo apt-get install -y imagemagick
+            mkdir -p android/app/src/main/res/mipmap-mdpi
+            mkdir -p android/app/src/main/res/mipmap-hdpi
+            mkdir -p android/app/src/main/res/mipmap-xhdpi
+            mkdir -p android/app/src/main/res/mipmap-xxhdpi
+            mkdir -p android/app/src/main/res/mipmap-xxxhdpi
 
-          # Set minSdk to 22 & NDK version
-          find android/app -name "build.gradle*" -exec sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 22/g' {} + || true
-          find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 22/g' {} + || true
-          find android/app -name "build.gradle*" -exec sed -i 's/minSdk = [0-9]*/minSdk = 22/g' {} + || true
-          find android/app -name "build.gradle*" -exec sed -i 's/minSdkVersion [0-9]*/minSdkVersion 22/g' {} + || true
-          find android/app -name "build.gradle*" -exec sed -i '/android {/a \    ndkVersion = "27.0.12077973"' {} + || true
-
-          # Permissions
-          sed -i 's/<manifest/<manifest xmlns:tools="http:\/\/schemas.android.com\/tools"/g' android/app/src/main/AndroidManifest.xml
-          sed -i '/<application/i <uses-sdk tools:overrideLibrary="com.github.rmtmckenzie.native_device_orientation"\/>\n<uses-permission android:name="android.permission.INTERNET"\/>\n<uses-permission android:name="android.permission.CAMERA"\/>\n<uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"\/>' android/app/src/main/AndroidManifest.xml
-
-          # Native FLAG_SECURE
-          MAIN_DIR=$(dirname $(find android -name "MainActivity.*" | head -n 1))
-          rm -f "$MAIN_DIR"/MainActivity.*
-          cat << 'KOTLIN_EOF' > "$MAIN_DIR/MainActivity.kt"
-          package com.fizzlive.fizz_live
-
-          import android.os.Bundle
-          import android.view.WindowManager
-          import io.flutter.embedding.android.FlutterActivity
-
-          class MainActivity: FlutterActivity() {
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-              }
-          }
-          KOTLIN_EOF
-
-      - name: Install Packages
-        run: flutter pub get
+            convert logo.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert logo.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert logo.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert logo.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert logo.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            echo "App launcher icons successfully generated from logo.png!"
+          else
+            echo "Warning: logo.png not found in repository root!"
+          fi
 
       - name: Compile Official Signed Release APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: |
+          flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK for Distribution
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/FizzLive.apk
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk Fizz-Live-Release.apk
 
       - name: Publish Direct Public Download Release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
         with:
-          tag_name: release-${{ github.run_id }}-${{ github.run_number }}
-          name: Fizz Live Pro (Monetized Ads Release)
+          tag_name: v1.0.${{ github.run_number }}
+          name: Fizz Live Release v1.0.${{ github.run_number }}
           draft: false
           prerelease: false
-          files: build/app/outputs/flutter-apk/FizzLive.apk
+          files: Fizz-Live-Release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
