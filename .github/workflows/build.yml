@@ -25,13 +25,13 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Recreate Clean Android Structure & SDK 36
+      - name: Setup Android Project & SDK 36
         run: |
           rm -rf android build
           flutter create . --platforms android
           flutter pub get
 
-          # App build gradle files update
+          # Configure compileSdk 36
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -41,7 +41,6 @@ jobs:
             fi
           done
 
-          # Global subproject compileSdk 36
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -55,12 +54,12 @@ jobs:
           }
           EOF
 
-      - name: Auto-Inject App Logo to Android Icons
+      - name: Inject Logo Assets & Launcher Icons
         run: |
           if [ -f "logo.png" ]; then
-            echo "Found logo.png, generating icons..."
             sudo apt-get update && sudo apt-get install -y imagemagick
-
+            
+            # Replace all launcher icons across all standard folders
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$dir
             done
@@ -77,26 +76,22 @@ jobs:
             convert logo.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
             convert logo.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
-            # Remove vector xml to force png icon
+            # Remove adaptive XMLs so Android defaults strictly to our PNG icons
             rm -rf android/app/src/main/res/mipmap-anydpi-v26
+            
+            # Ensure AndroidManifest links directly to ic_launcher
+            sed -i 's/android:icon="@[^"]*"/android:icon="@mipmap\/ic_launcher"/g' android/app/src/main/AndroidManifest.xml || true
           fi
 
-      - name: Compile Official Signed Release APK Direct
+      - name: Official Flutter Engine Release Build
         run: |
-          # Build flutter dart assets first so app will never white-screen/crash
-          flutter build bundle
+          flutter clean
+          flutter pub get
+          flutter build apk --release --no-tree-shake-icons
 
-          # Compile direct via Gradle
-          cd android
-          chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon
-          cd ..
-
-      - name: Locate and Rename Release APK
+      - name: Export Official Release APK
         run: |
-          FOUND_APK=$(find . -type f -name "*release*.apk" | head -n 1)
-          echo "Found APK at: $FOUND_APK"
-          cp "$FOUND_APK" Fizz-Live-Release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk Fizz-Live-Release.apk
 
       - name: Publish Direct Public Download Release
         uses: softprops/action-gh-release@v1
