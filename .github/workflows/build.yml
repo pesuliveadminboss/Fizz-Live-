@@ -25,13 +25,12 @@ jobs:
           channel: 'stable'
           cache: false
 
-      - name: Configure Android Project & SDK 36
+      - name: Setup Android Project & SDK 36
         run: |
-          # 1. Clean existing build cache completely
           flutter clean
           flutter pub get
 
-          # 2. Update compileSdk & targetSdk to 36
+          # 1. Update compileSdk & targetSdk to 36
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -41,7 +40,7 @@ jobs:
             fi
           done
 
-          # 3. Global subproject compileSdk 36 (Fixes sqflite BAKLAVA & Zego SDK)
+          # 2. Global subproject compileSdk 36
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -55,35 +54,31 @@ jobs:
           }
           EOF
 
-          # 4. Inject Camera/Mic/LiveStream Permissions into Manifest
+          # 3. Add Live Stream Permissions to AndroidManifest.xml (Prevents Crash on Launch)
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          sed -i '/<manifest/a \
-              <uses-permission android:name="android.permission.INTERNET" />\
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
-              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\
-              <uses-permission android:name="android.permission.RECORD_AUDIO" />\
-              <uses-permission android:name="android.permission.CAMERA" />\
-              <uses-permission android:name="android.permission.BLUETOOTH" />\
-              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\
-              <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST" || true
-
-      - name: Generate Official App Icons
-        run: |
-          if [ -f "logo.png" ]; then
-            # Run official flutter launcher icon generator
-            dart run flutter_launcher_icons || true
-
-            # Set manifest icon attribute to launcher_icon
-            sed -i 's/android:icon="@[^"]*"/android:icon="@mipmap\/launcher_icon"/g' android/app/src/main/AndroidManifest.xml || true
-            sed -i 's/android:roundIcon="@[^"]*"/android:roundIcon="@mipmap\/launcher_icon"/g' android/app/src/main/AndroidManifest.xml || true
+          if [ -f "$MANIFEST" ]; then
+            sed -i '/<manifest/a \
+                <uses-permission android:name="android.permission.INTERNET" />\
+                <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
+                <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\
+                <uses-permission android:name="android.permission.RECORD_AUDIO" />\
+                <uses-permission android:name="android.permission.CAMERA" />\
+                <uses-permission android:name="android.permission.BLUETOOTH" />\
+                <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\
+                <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST" || true
           fi
 
-      - name: Compile Official Flutter Release APK
+      - name: Generate App Icons
         run: |
-          # Compile native Dart AOT engine + release APK cleanly without daemon conflicts
+          if [ -f "logo.png" ]; then
+            dart run flutter_launcher_icons || true
+          fi
+
+      - name: Build Official Flutter APK
+        run: |
           flutter build apk --release --no-tree-shake-icons
 
-      - name: Locate and Package Release APK
+      - name: Export Release APK
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk Fizz-Live-Release.apk
 
