@@ -25,12 +25,16 @@ jobs:
           channel: 'stable'
           cache: false
 
-      - name: Setup Android Project & SDK 36
+      - name: Recreate Clean Android V2 Embedding Project & SDK 36
         run: |
-          flutter clean
+          # 1. Purge old legacy v1 android directory completely
+          rm -rf android build .dart_tool
+          
+          # 2. Re-create clean modern Android v2 project
+          flutter create . --platforms android --org com.pesulive.fizzlive
           flutter pub get
 
-          # 1. Update compileSdk & targetSdk to 36
+          # 3. Configure compileSdk & targetSdk to 36
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -40,7 +44,7 @@ jobs:
             fi
           done
 
-          # 2. Global subproject compileSdk 36
+          # 4. Global subproject compileSdk 36 (Fixes BAKLAVA symbol in sqflite)
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -54,21 +58,21 @@ jobs:
           }
           EOF
 
-          # 3. Add Live Stream Permissions to AndroidManifest.xml (Prevents Crash on Launch)
+          # 5. Inject Required Live Streaming Permissions to AndroidManifest.xml
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
             sed -i '/<manifest/a \
-                <uses-permission android:name="android.permission.INTERNET" />\
-                <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
-                <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\
-                <uses-permission android:name="android.permission.RECORD_AUDIO" />\
-                <uses-permission android:name="android.permission.CAMERA" />\
-                <uses-permission android:name="android.permission.BLUETOOTH" />\
-                <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\
-                <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST" || true
+              <uses-permission android:name="android.permission.INTERNET" />\
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
+              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />\
+              <uses-permission android:name="android.permission.CAMERA" />\
+              <uses-permission android:name="android.permission.BLUETOOTH" />\
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\
+              <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST" || true
           fi
 
-      - name: Generate App Icons
+      - name: Generate Official App Icons
         run: |
           if [ -f "logo.png" ]; then
             dart run flutter_launcher_icons || true
