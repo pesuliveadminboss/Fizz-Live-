@@ -191,9 +191,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String? activeMiniRoomID;
 
   final List<Map<String, String>> liveRooms = [
-    {'id': 'room_101', 'host': 'Priya Live', 'viewers': '1.2k', 'gender': 'Female'},
-    {'id': 'room_102', 'host': 'Ananya Stream', 'viewers': '850', 'gender': 'Female'},
-    {'id': 'room_103', 'host': 'Sneha Chat', 'viewers': '2.1k', 'gender': 'Female'},
+    {'id': 'room_101', 'host': 'Priya Live', 'viewers': '1.2k'},
+    {'id': 'room_102', 'host': 'Ananya Stream', 'viewers': '850'},
+    {'id': 'room_103', 'host': 'Sneha Chat', 'viewers': '2.1k'},
   ];
 
   @override
@@ -420,30 +420,28 @@ class _LiveRoomState extends State<LiveRoomScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext sheetContext) {
+      builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
+          builder: (context, setModalState) {
             return Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.grey, size: 20),
-                        onPressed: () => Navigator.pop(sheetContext),
-                      ),
-                    ],
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.grey),
+                      onPressed: () => Navigator.pop(sheetContext),
+                    ),
                   ),
                   const Text(
                     'Make video calls with Gems',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                   const SizedBox(height: 4),
                   const Text('Call beauties with Gems', style: TextStyle(fontSize: 12, color: Colors.grey)),
@@ -456,66 +454,93 @@ class _LiveRoomState extends State<LiveRoomScreen> {
                       crossAxisCount: 3,
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
-                      childAspectRatio: 0.88,
+                      childAspectRatio: 0.85,
                     ),
-                    itemBuilder: (BuildContext ctx, int index) {
+                    itemBuilder: (context, index) {
                       final item = gemsPackages[index];
-                      final bool isSelected = selectedGemsIndex == index;
+                      final isSelected = selectedGemsIndex == index;
                       return GestureDetector(
-                        onTap: () => setModalState(() => selectedGemsIndex = index),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: isSelected ? const Color(0xFFFFF3E0) : const Color(0xFFF9F9F9),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected ? Colors.orangeAccent : Colors.black12,
-                                  width: isSelected ? 1.5 : 1.0,
+                        onTap: () {
+                          setModalState(() {
+                            selectedGemsIndex = index;
+                          });
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFFFF3E0) : const Color(0xFFF9F9F9),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? Colors.orangeAccent : Colors.black12,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.diamond_rounded, color: Colors.amber, size: 26),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${item['gems']}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? Colors.orange[800] : Colors.black87,
                                 ),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.diamond_rounded, color: Colors.amber, size: 28),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${item['gems']}',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: isSelected ? Colors.orange[800] : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Colors.black12),
-                                    ),
-                                    child: Text(
-                                      '${item['price']}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: isSelected ? Colors.orange[800] : Colors.grey[700],
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              const SizedBox(height: 4),
+                              Text(
+                                '${item['price']}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[700]),
                               ),
-                            ),
-                            Positioned(
-                              top: -6,
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: Colors.pinkAccent.withOpacity(0.85),
-                                    borderRadius: BorderRadius.ci
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text('My Gems: $userGems', style: const TextStyle(color: Colors.black54)),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF2D75),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                      ),
+                      onPressed: () {
+                        final selected = gemsPackages[selectedGemsIndex];
+                        setState(() {
+                          userGems += (selected['gems'] as int);
+                        });
+                        Navigator.pop(sheetContext);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${selected['gems']} Gems Added!')),
+                        );
+                      },
+                      child: const Text('Continue', style: TextStyle(color: Colors.white, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          ZegoUIKitPrebuiltLiveStreaming(
+            appID: appID,
+            appSign: appSign,
+            userID: currentUserID,
+            userName: currentUserName,
+            liveID: widget.roomID,
+            config: widget.isHost
+             
