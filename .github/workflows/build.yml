@@ -25,30 +25,22 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Recreate Android Project & Force SDK 34
+      - name: Recreate Android Project & Configure SDK 34
         run: |
           rm -rf android
           flutter create . --platforms android
           flutter pub get
 
-          # App build.gradle-la compileSdk & targetSdk 34 enforce pandrom
-          python3 -c '
-          with open("android/app/build.gradle", "r") as f:
-              content = f.read()
-
-          # Replace compileSdk/compileSdkVersion with 34
-          import re
-          content = re.sub(r"compileSdk\s*=\s*flutter\.compileSdkVersion", "compileSdk = 34", content)
-          content = re.sub(r"compileSdkVersion\s+flutter\.compileSdkVersion", "compileSdkVersion 34", content)
-          content = re.sub(r"targetSdk\s*=\s*flutter\.targetSdkVersion", "targetSdk = 34", content)
-          content = re.sub(r"targetSdkVersion\s+flutter\.targetSdkVersion", "targetSdkVersion 34", content)
-
-          with open("android/app/build.gradle", "w") as f:
-              f.write(content)
-          '
-
-          # Print verified config to log
-          grep -E "compileSdk|targetSdk" android/app/build.gradle || true
+          # Check whether it's build.gradle or build.gradle.kts and update SDK to 34
+          for file in android/app/build.gradle android/app/build.gradle.kts; do
+            if [ -f "$file" ]; then
+              echo "Updating $file to compileSdk 34..."
+              sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 34/g' "$file" || true
+              sed -i 's/targetSdk\s*=\s*flutter.targetSdkVersion/targetSdk = 34/g' "$file" || true
+              sed -i 's/compileSdkVersion\s\+flutter.compileSdkVersion/compileSdkVersion 34/g' "$file" || true
+              sed -i 's/targetSdkVersion\s\+flutter.targetSdkVersion/targetSdkVersion 34/g' "$file" || true
+            fi
+          done
 
       - name: Auto-Inject App Logo to Android Icons
         run: |
