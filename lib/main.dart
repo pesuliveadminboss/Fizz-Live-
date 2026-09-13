@@ -31,6 +31,7 @@ String currentUserName = 'User_${Random().nextInt(1000)}';
 String currentUserID = 'user_${Random().nextInt(99999)}';
 String currentUserGender = 'Male';
 bool isSuperAdmin = false;
+Set<String> followedStreamers = {};
 
 class AgeGateScreen extends StatefulWidget {
   const AgeGateScreen({super.key});
@@ -139,14 +140,26 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   BannerAd? _bannerAd;
   bool _isBannerLoaded = false;
   String? activeMiniRoomID;
+  late TabController _tabController;
+
+  final List<Map<String, String>> allRooms = [
+    {'id': 'room_101', 'host': 'Priya Live'},
+    {'id': 'room_102', 'host': 'Ananya Stream'},
+    {'id': 'room_103', 'host': 'Sneha Chat'},
+  ];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadBannerAd();
+  }
+
+  void _loadBannerAd() {
     _bannerAd = BannerAd(
       adUnitId: 'ca-app-pub-3940256099942544/6300978111',
       request: const AdRequest(),
@@ -160,19 +173,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _bannerAd?.dispose();
     super.dispose();
   }
 
-  void _openLive(String roomID, bool isHost) {
+  void _openLive(String roomID, String hostName, bool isHost) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => LiveRoomScreen(
           roomID: roomID,
+          hostName: hostName,
           isHost: isHost,
           onMiniPlayerRequested: (rId) => setState(() => activeMiniRoomID = rId),
         ),
+      ),
+    ).then((_) => setState(() {}));
+  }
+
+  Widget _buildRoomTile(Map<String, String> room) {
+    return ListTile(
+      title: Text(room['host']!),
+      trailing: ElevatedButton(
+        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2D75)),
+        onPressed: () => _openLive(room['id']!, room['host']!, false),
+        child: const Text('Watch'),
       ),
     );
   }
@@ -180,10 +206,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     bool canGoLive = currentUserGender == 'Female' || isSuperAdmin;
+    final followingRooms = allRooms.where((r) => followedStreamers.contains(r['host'])).toList();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fizz Live', style: TextStyle(color: Color(0xFFFF2D75))),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: const Color(0xFFFF2D75),
+          tabs: const [
+            Tab(text: 'All Live'),
+            Tab(text: 'Following'),
+          ],
+        ),
         actions: [
           Center(
             child: Padding(
@@ -198,22 +233,19 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             children: [
               Expanded(
-                child: ListView(
+                child: TabBarView(
+                  controller: _tabController,
                   children: [
-                    ListTile(
-                      title: const Text('Host 1'),
-                      trailing: ElevatedButton(
-                        onPressed: () => _openLive('room_101', false),
-                        child: const Text('Watch'),
-                      ),
+                    ListView.builder(
+                      itemCount: allRooms.length,
+                      itemBuilder: (ctx, i) => _buildRoomTile(allRooms[i]),
                     ),
-                    ListTile(
-                      title: const Text('Host 2'),
-                      trailing: ElevatedButton(
-                        onPressed: () => _openLive('room_102', false),
-                        child: const Text('Watch'),
-                      ),
-                    ),
+                    followingRooms.isEmpty
+                        ? const Center(child: Text('No followed streamers live!'))
+                        : ListView.builder(
+                            itemCount: followingRooms.length,
+                            itemBuilder: (ctx, i) => _buildRoomTile(followingRooms[i]),
+                          ),
                   ],
                 ),
               ),
@@ -246,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: canGoLive
           ? FloatingActionButton(
               backgroundColor: const Color(0xFFFF2D75),
-              onPressed: () => _openLive('room_${currentUserID.substring(0, 4)}', true),
+              onPressed: () => _openLive('room_${currentUserID.substring(0, 4)}', currentUserName, true),
               child: const Icon(Icons.videocam),
             )
           : null,
@@ -256,12 +288,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class LiveRoomScreen extends StatefulWidget {
   final String roomID;
+  final String hostName;
   final bool isHost;
   final Function(String) onMiniPlayerRequested;
 
   const LiveRoomScreen({
     super.key,
     required this.roomID,
+    required this.hostName,
     required this.isHost,
     required this.onMiniPlayerRequested,
   });
@@ -311,16 +345,10 @@ class _LiveRoomState extends State<LiveRoomScreen> with SingleTickerProviderStat
   }
 
   void _triggerGiftAnimation(String emoji) {
-    setState(() {
-      animatedGiftEmoji = emoji;
-    });
+    setState(() => animatedGiftEmoji = emoji);
     _animController.forward(from: 0.0);
     Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          animatedGiftEmoji = null;
-        });
-      }
+      if (mounted) setState(() => animatedGiftEmoji = null);
     });
   }
 
@@ -366,9 +394,7 @@ class _LiveRoomState extends State<LiveRoomScreen> with SingleTickerProviderStat
                   return ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.pinkAccent),
                     onPressed: () {
-                      setState(() {
-                        userGems += (item['gems'] as int);
-                      });
+                      setState(() => userGems += (item['gems'] as int));
                       Navigator.pop(sheetCtx);
                     },
                     child: Column(
@@ -393,6 +419,8 @@ class _LiveRoomState extends State<LiveRoomScreen> with SingleTickerProviderStat
     final liveConfig = widget.isHost
         ? ZegoUIKitPrebuiltLiveStreamingConfig.host()
         : ZegoUIKitPrebuiltLiveStreamingConfig.audience();
+
+    bool isFollowing = followedStreamers.contains(widget.hostName);
 
     return Scaffold(
       body: Stack(
@@ -437,7 +465,38 @@ class _LiveRoomState extends State<LiveRoomScreen> with SingleTickerProviderStat
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Gems: $userGems', style: const TextStyle(color: Colors.white)),
+                Row(
+                  children: [
+                    Text(widget.hostName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    if (!widget.isHost)
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            if (isFollowing) {
+                              followedStreamers.remove(widget.hostName);
+                            } else {
+                              followedStreamers.add(widget.hostName);
+                            }
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(isFollowing ? 'Unfollowed' : 'Following ${widget.hostName}!')),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isFollowing ? Colors.white24 : const Color(0xFFFF2D75),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            isFollowing ? 'Following' : '+ Follow',
+                            style: const TextStyle(color: Colors.white, fontSize: 11),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 Row(
                   children: [
                     if (widget.isHost)
@@ -516,4 +575,3 @@ class _LiveRoomState extends State<LiveRoomScreen> with SingleTickerProviderStat
     );
   }
 }
-
