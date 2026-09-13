@@ -270,13 +270,17 @@ class LiveRoomScreen extends StatefulWidget {
   State<LiveRoomScreen> createState() => _LiveRoomState();
 }
 
-class _LiveRoomState extends State<LiveRoomScreen> {
+class _LiveRoomState extends State<LiveRoomScreen> with SingleTickerProviderStateMixin {
   static const int appID = 123456789;
   static const String appSign = 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
 
   bool isBusyMode = false;
   final List<String> chatMessages = ['Welcome!'];
   final TextEditingController _chatController = TextEditingController();
+
+  String? animatedGiftEmoji;
+  late AnimationController _animController;
+  late Animation<double> _scaleAnimation;
 
   final List<Map<String, dynamic>> gemsPackages = [
     {'gems': 4050, 'price': 'Rs.100'},
@@ -287,12 +291,46 @@ class _LiveRoomState extends State<LiveRoomScreen> {
     {'gems': 167400, 'price': 'Rs.4000'},
   ];
 
-  void _sendGift(String giftName, int cost) {
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.elasticOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _triggerGiftAnimation(String emoji) {
+    setState(() {
+      animatedGiftEmoji = emoji;
+    });
+    _animController.forward(from: 0.0);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          animatedGiftEmoji = null;
+        });
+      }
+    });
+  }
+
+  void _sendGift(String giftName, String emoji, int cost) {
     if (userGems >= cost) {
       setState(() {
         userGems -= cost;
-        chatMessages.add('Sent $giftName!');
+        chatMessages.add('Sent $giftName $emoji');
       });
+      _triggerGiftAnimation(emoji);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Sent $giftName! Remaining: $userGems')),
       );
@@ -374,6 +412,24 @@ class _LiveRoomState extends State<LiveRoomScreen> {
                 child: Text('BUSY', style: TextStyle(color: Colors.white)),
               ),
             ),
+          if (animatedGiftEmoji != null)
+            Center(
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFF2D75), width: 3),
+                  ),
+                  child: Text(
+                    animatedGiftEmoji!,
+                    style: const TextStyle(fontSize: 70),
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             top: 40,
             left: 16,
@@ -440,11 +496,11 @@ class _LiveRoomState extends State<LiveRoomScreen> {
                     ),
                     IconButton(
                       icon: const Text('🌹'),
-                      onPressed: () => _sendGift('Rose', 50),
+                      onPressed: () => _sendGift('Rose', '🌹', 50),
                     ),
                     IconButton(
                       icon: const Text('🚀'),
-                      onPressed: () => _sendGift('Rocket', 500),
+                      onPressed: () => _sendGift('Rocket', '🚀', 500),
                     ),
                     IconButton(
                       icon: const Icon(Icons.add_circle, color: Colors.amber),
@@ -460,3 +516,4 @@ class _LiveRoomState extends State<LiveRoomScreen> {
     );
   }
 }
+
