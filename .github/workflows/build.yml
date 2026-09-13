@@ -25,13 +25,13 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Setup Android Project & SDK 36
+      - name: Recreate Android Project & Configure Engine
         run: |
           rm -rf android build
           flutter create . --platforms android
           flutter pub get
 
-          # Configure compileSdk 36
+          # 1. Update compileSdk & targetSdk to 36
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -41,6 +41,7 @@ jobs:
             fi
           done
 
+          # 2. Global subproject compileSdk 36
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -54,44 +55,59 @@ jobs:
           }
           EOF
 
-      - name: Inject Logo Assets & Launcher Icons
+          # 3. Add Live Stream Permissions to AndroidManifest.xml (Prevents Crash on Launch)
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i '/<manifest/a \
+              <uses-permission android:name="android.permission.INTERNET" />\
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
+              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />\
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />\
+              <uses-permission android:name="android.permission.CAMERA" />\
+              <uses-permission android:name="android.permission.BLUETOOTH" />\
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\
+              <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST"
+
+      - name: Auto-Inject App Logo to Android Icons
         run: |
           if [ -f "logo.png" ]; then
+            echo "Generating high-res adaptive launcher icons..."
             sudo apt-get update && sudo apt-get install -y imagemagick
-            
-            # Replace all launcher icons across all standard folders
+
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$dir
             done
 
-            convert logo.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert logo.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert logo.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert logo.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert logo.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            for pair in "mipmap-mdpi 48" "mipmap-hdpi 72" "mipmap-xhdpi 96" "mipmap-xxhdpi 144" "mipmap-xxxhdpi 192"; do
+              set -- $pair
+              convert logo.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
+              convert logo.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
+              convert logo.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_foreground.png
+            done
 
-            convert logo.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-            convert logo.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-            convert logo.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-            convert logo.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-            convert logo.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-
-            # Remove adaptive XMLs so Android defaults strictly to our PNG icons
-            rm -rf android/app/src/main/res/mipmap-anydpi-v26
-            
-            # Ensure AndroidManifest links directly to ic_launcher
+            # Force Manifest to use our generated icons
             sed -i 's/android:icon="@[^"]*"/android:icon="@mipmap\/ic_launcher"/g' android/app/src/main/AndroidManifest.xml || true
+            sed -i 's/android:roundIcon="@[^"]*"/android:roundIcon="@mipmap\/ic_launcher_round"/g' android/app/src/main/AndroidManifest.xml || true
           fi
 
-      - name: Official Flutter Engine Release Build
+      - name: Compile Official Production APK
         run: |
-          flutter clean
-          flutter pub get
-          flutter build apk --release --no-tree-shake-icons
+          # Compile Flutter engine bundle first
+          flutter build bundle
 
-      - name: Export Official Release APK
+          # Build release APK via Gradle without caching conflicts
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon -Dorg.gradle.parallel=false
+          cd ..
+
+      - name: Locate and Package Release APK
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk Fizz-Live-Release.apk
+          APK_PATH=$(find android/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find . -type f -name "*release*.apk" | head -n 1)
+          fi
+          echo "Discovered Release APK at: $APK_PATH"
+          cp "$APK_PATH" Fizz-Live-Release.apk
 
       - name: Publish Direct Public Download Release
         uses: softprops/action-gh-release@v1
