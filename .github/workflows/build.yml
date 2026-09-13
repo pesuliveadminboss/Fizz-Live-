@@ -25,13 +25,13 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Recreate Android Project & Configure SDK 36
+      - name: Recreate Clean Android Structure & SDK 36
         run: |
-          rm -rf android
+          rm -rf android build
           flutter create . --platforms android
           flutter pub get
 
-          # Patch app build gradle files to SDK 36
+          # App build gradle files update
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -41,7 +41,7 @@ jobs:
             fi
           done
 
-          # Globally enforce compileSdkVersion 36 on all subproject plugins (fixes BAKLAVA symbol in sqflite)
+          # Global subproject compileSdk 36
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -58,7 +58,7 @@ jobs:
       - name: Auto-Inject App Logo to Android Icons
         run: |
           if [ -f "logo.png" ]; then
-            echo "Found logo.png, replacing Android app launcher icons..."
+            echo "Found logo.png, generating icons..."
             sudo apt-get update && sudo apt-get install -y imagemagick
             mkdir -p android/app/src/main/res/mipmap-mdpi
             mkdir -p android/app/src/main/res/mipmap-hdpi
@@ -71,18 +71,19 @@ jobs:
             convert logo.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
             convert logo.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
             convert logo.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            echo "App launcher icons successfully generated from logo.png!"
-          else
-            echo "Warning: logo.png not found in repository root!"
           fi
 
-      - name: Compile Official Signed Release APK
+      - name: Compile Official Signed Release APK Direct
         run: |
-          flutter build apk --release --no-tree-shake-icons
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+          cd ..
 
       - name: Rename APK for Distribution
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk Fizz-Live-Release.apk
+          find . -name "*.apk"
+          cp $(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1) Fizz-Live-Release.apk
 
       - name: Publish Direct Public Download Release
         uses: softprops/action-gh-release@v1
