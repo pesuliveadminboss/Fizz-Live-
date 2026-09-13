@@ -102,13 +102,22 @@ jobs:
           EOF
           fi
 
-      - name: Build Full Flutter Release (Dart Native + Engine)
+      - name: Direct Release Compilation Without File Watcher
         run: |
-          flutter build apk --release --no-tree-shake-icons --target-platform android-arm,android-arm64
+          # Disable Gradle file watching to prevent "Already watching path" error
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
+          cd ..
 
-      - name: Rename and Package APK
+      - name: Locate and Package Release APK
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk Fizz-Live-Release.apk
+          APK_PATH=$(find android/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find . -type f -name "*release*.apk" | head -n 1)
+          fi
+          echo "Discovered Release APK at: $APK_PATH"
+          cp "$APK_PATH" Fizz-Live-Release.apk
 
       - name: Publish Direct Public Download Release
         uses: softprops/action-gh-release@v1
