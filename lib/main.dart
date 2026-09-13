@@ -26,14 +26,12 @@ class FizzLiveApp extends StatelessWidget {
   }
 }
 
-// ---------------- GLOBAL STATE ----------------
 int userGems = 1670;
 String currentUserName = 'User_${Random().nextInt(1000)}';
 String currentUserID = 'user_${Random().nextInt(99999)}';
 String currentUserGender = 'Male';
 bool isSuperAdmin = false;
 
-// ---------------- 1. AGE GATE SCREEN ----------------
 class AgeGateScreen extends StatefulWidget {
   const AgeGateScreen({super.key});
 
@@ -177,7 +175,6 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
   }
 }
 
-// ---------------- 2. HOME SCREEN ----------------
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -362,7 +359,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ---------------- 3. LIVE STREAM SCREEN ----------------
 class LiveRoomScreen extends StatefulWidget {
   final String roomID;
   final bool isHost;
@@ -389,12 +385,12 @@ class _LiveRoomState extends State<LiveRoomScreen> {
   int selectedGemsIndex = 0;
 
   final List<Map<String, dynamic>> gemsPackages = [
-    {'gems': 4050, 'price': 'Rs.100.00', 'tag': 'ONCE'},
-    {'gems': 8100, 'price': 'Rs.200.00', 'tag': '17%off'},
-    {'gems': 16380, 'price': 'Rs.400.00', 'tag': '17%off'},
-    {'gems': 32940, 'price': 'Rs.800.00', 'tag': '17%off'},
-    {'gems': 66600, 'price': 'Rs.1600.00', 'tag': '30%off'},
-    {'gems': 167400, 'price': 'Rs.4000.00', 'tag': '60%off'},
+    {'gems': 4050, 'price': 'Rs.100.00'},
+    {'gems': 8100, 'price': 'Rs.200.00'},
+    {'gems': 16380, 'price': 'Rs.400.00'},
+    {'gems': 32940, 'price': 'Rs.800.00'},
+    {'gems': 66600, 'price': 'Rs.1600.00'},
+    {'gems': 167400, 'price': 'Rs.4000.00'},
   ];
 
   void _sendGift(String giftName, int cost) {
@@ -533,6 +529,10 @@ class _LiveRoomState extends State<LiveRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final liveConfig = widget.isHost
+        ? ZegoUIKitPrebuiltLiveStreamingConfig.host()
+        : ZegoUIKitPrebuiltLiveStreamingConfig.audience();
+
     return Scaffold(
       body: Stack(
         children: [
@@ -542,5 +542,10 @@ class _LiveRoomState extends State<LiveRoomScreen> {
             userID: currentUserID,
             userName: currentUserName,
             liveID: widget.roomID,
-            config: widget.isHost
-             
+            config: liveConfig,
+          ),
+          if (isBusyMode)
+            Container(
+              color: Colors.black,
+              child: const Center(
+                child: Text('STREAMER IS CURRENTL
