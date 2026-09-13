@@ -25,17 +25,30 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Clean Recreate Android Project & Enforce SDK 34
+      - name: Recreate Android Project & Force SDK 34
         run: |
           rm -rf android
           flutter create . --platforms android
           flutter pub get
 
-          # Flutter app build.gradle-la compileSdk & targetSdk 34 set panradhu
-          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 34/g' android/app/build.gradle || true
-          sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 34/g' android/app/build.gradle || true
-          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 34/g' android/app/build.gradle || true
-          sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/g' android/app/build.gradle || true
+          # App build.gradle-la compileSdk & targetSdk 34 enforce pandrom
+          python3 -c '
+          with open("android/app/build.gradle", "r") as f:
+              content = f.read()
+
+          # Replace compileSdk/compileSdkVersion with 34
+          import re
+          content = re.sub(r"compileSdk\s*=\s*flutter\.compileSdkVersion", "compileSdk = 34", content)
+          content = re.sub(r"compileSdkVersion\s+flutter\.compileSdkVersion", "compileSdkVersion 34", content)
+          content = re.sub(r"targetSdk\s*=\s*flutter\.targetSdkVersion", "targetSdk = 34", content)
+          content = re.sub(r"targetSdkVersion\s+flutter\.targetSdkVersion", "targetSdkVersion 34", content)
+
+          with open("android/app/build.gradle", "w") as f:
+              f.write(content)
+          '
+
+          # Print verified config to log
+          grep -E "compileSdk|targetSdk" android/app/build.gradle || true
 
       - name: Auto-Inject App Logo to Android Icons
         run: |
@@ -53,7 +66,7 @@ jobs:
             convert logo.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
             convert logo.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
             convert logo.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            echo "App launcher icons successfully generated!"
+            echo "App launcher icons successfully generated from logo.png!"
           else
             echo "Warning: logo.png not found in repository root!"
           fi
