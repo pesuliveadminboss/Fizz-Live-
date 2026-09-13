@@ -25,20 +25,20 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Recreate Android Project & Configure SDK 35
+      - name: Recreate Android Project & Enforce SDK 36
         run: |
           rm -rf android
           flutter create . --platforms android
           flutter pub get
 
-          # Check whether it's build.gradle or build.gradle.kts and update SDK to 35
+          # Check whether it's build.gradle or build.gradle.kts and update SDK to 36
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
-              echo "Updating $file to compileSdk 35..."
-              sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 35/g' "$file" || true
-              sed -i 's/targetSdk\s*=\s*flutter.targetSdkVersion/targetSdk = 35/g' "$file" || true
-              sed -i 's/compileSdkVersion\s\+flutter.compileSdkVersion/compileSdkVersion 35/g' "$file" || true
-              sed -i 's/targetSdkVersion\s\+flutter.targetSdkVersion/targetSdkVersion 35/g' "$file" || true
+              echo "Updating $file to compileSdk 36..."
+              sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
+              sed -i 's/targetSdk\s*=\s*flutter.targetSdkVersion/targetSdk = 36/g' "$file" || true
+              sed -i 's/compileSdkVersion\s\+flutter.compileSdkVersion/compileSdkVersion 36/g' "$file" || true
+              sed -i 's/targetSdkVersion\s\+flutter.targetSdkVersion/targetSdkVersion 36/g' "$file" || true
             fi
           done
 
