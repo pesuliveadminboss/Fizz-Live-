@@ -26,14 +26,14 @@ class FizzLiveApp extends StatelessWidget {
   }
 }
 
-// ---------------- உலகளாவிய தரவுகள் (GLOBAL APP STATE) ----------------
+// ---------------- GLOBAL STATE ----------------
 int userGems = 1670;
 String currentUserName = 'User_${Random().nextInt(1000)}';
 String currentUserID = 'user_${Random().nextInt(99999)}';
 String currentUserGender = 'Male';
 bool isSuperAdmin = false;
 
-// ---------------- 1. வயது சரிபார்ப்பு & சுயவிவர திரை ----------------
+// ---------------- 1. AGE GATE SCREEN ----------------
 class AgeGateScreen extends StatefulWidget {
   const AgeGateScreen({super.key});
 
@@ -51,13 +51,13 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
     int age = int.tryParse(_ageController.text) ?? 0;
     if (!_is18Plus || age < 18) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('நீங்கள் நுழைய 18 வயது நிரம்பியவராக இருக்க வேண்டும்!')),
+        const SnackBar(content: Text('You must be 18+ to enter Fizz Live!')),
       );
       return;
     }
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('உங்கள் பெயரை உள்ளிடவும்!')),
+        const SnackBar(content: Text('Please enter your name!')),
       );
       return;
     }
@@ -75,7 +75,7 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
     if (val == '7777') {
       isSuperAdmin = true;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('சூப்பர் அட்மின் மோடு இயக்கப்பட்டது! (7777)')),
+        const SnackBar(content: Text('Super Admin Mode Activated! (7777)')),
       );
     }
   }
@@ -101,7 +101,7 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: 'உங்கள் பெயர் / நிக்நேம்',
+                  labelText: 'Your Name / Nickname',
                   filled: true,
                   fillColor: Colors.white10,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -113,7 +113,7 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
                 keyboardType: TextInputType.number,
                 onChanged: _checkAdminPin,
                 decoration: InputDecoration(
-                  labelText: 'உங்கள் வயது (18+)',
+                  labelText: 'Your Age (18+)',
                   filled: true,
                   fillColor: Colors.white10,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -133,8 +133,8 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
                     isExpanded: true,
                     dropdownColor: const Color(0xFF1E1E2C),
                     items: const [
-                      DropdownMenuItem(value: 'Male', child: Text('ஆண் (பார்வையாளர் முறை)')),
-                      DropdownMenuItem(value: 'Female', child: Text('பெண் (லைவ் ஸ்ட்ரீமிங் செய்யலாம்)')),
+                      DropdownMenuItem(value: 'Male', child: Text('Male (Viewer Mode)')),
+                      DropdownMenuItem(value: 'Female', child: Text('Female (Can Go Live)')),
                     ],
                     onChanged: (val) {
                       setState(() {
@@ -147,7 +147,7 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
               const SizedBox(height: 14),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('எனக்கு 18 வயது நிறைவடைந்துவிட்டது என்பதை உறுதி செய்கிறேன்.', style: TextStyle(fontSize: 13)),
+                title: const Text('I confirm that I am at least 18 years old.', style: TextStyle(fontSize: 13)),
                 value: _is18Plus,
                 activeColor: const Color(0xFFFF2D75),
                 onChanged: (val) {
@@ -177,7 +177,7 @@ class _AgeGateScreenState extends State<AgeGateScreen> {
   }
 }
 
-// ---------------- 2. முகப்புப் பக்கம் (HOME FEED & ROOM LIST) ----------------
+// ---------------- 2. HOME SCREEN ----------------
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -204,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _loadBannerAd() {
     _bannerAd = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111', // கூகுளின் அதிகாரப்பூர்வ டெஸ்ட் பேனர் ஐடி
+      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
       request: const AdRequest(),
       size: AdSize.banner,
       listener: BannerAdListener(
@@ -284,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(room['host']![0], style: const TextStyle(color: Colors.white)),
                         ),
                         title: Text(room['host']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('🔥 ${room['viewers']} Viewers', style: const TextStyle(color: Colors.white54)),
+                        subtitle: Text('${room['viewers']} Viewers', style: const TextStyle(color: Colors.white54)),
                         trailing: ElevatedButton(
                           style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF2D75)),
                           onPressed: () => _openLive(room['id']!, false),
@@ -303,8 +303,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
             ],
           ),
-
-          // மினி பிளேயர் (Mini Player Floating Widget)
           if (activeMiniRoomID != null)
             Positioned(
               bottom: 60,
@@ -364,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ---------------- 3. லைவ் ஸ்ட்ரீமிங் & ஜெம்ஸ் ரீசார்ஜ் திரை ----------------
+// ---------------- 3. LIVE STREAM SCREEN ----------------
 class LiveRoomScreen extends StatefulWidget {
   final String roomID;
   final bool isHost;
@@ -386,48 +384,45 @@ class _LiveRoomState extends State<LiveRoomScreen> {
   static const String appSign = 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
 
   bool isBusyMode = false;
-  final List<String> chatMessages = ['Fizz Live-க்கு நல்வரவு! விதிகளுக்கு கட்டுப்பட்டு நடக்கவும்.'];
+  final List<String> chatMessages = ['Welcome to Fizz Live!'];
   final TextEditingController _chatController = TextEditingController();
   int selectedGemsIndex = 0;
 
-  // நீ படத்தில் காட்டிய 6 விதமான பேக்கேஜ்கள்
   final List<Map<String, dynamic>> gemsPackages = [
-    {'gems': 4050, 'price': '₹100.00', 'tag': 'ONCE'},
-    {'gems': 8100, 'price': '₹200.00', 'tag': '17%off'},
-    {'gems': 16380, 'price': '₹400.00', 'tag': '17%off'},
-    {'gems': 32940, 'price': '₹800.00', 'tag': '17%off'},
-    {'gems': 66600, 'price': '₹1,600.00', 'tag': '30%off'},
-    {'gems': 167400, 'price': '₹4,000.00', 'tag': '60%off'},
+    {'gems': 4050, 'price': 'Rs.100.00', 'tag': 'ONCE'},
+    {'gems': 8100, 'price': 'Rs.200.00', 'tag': '17%off'},
+    {'gems': 16380, 'price': 'Rs.400.00', 'tag': '17%off'},
+    {'gems': 32940, 'price': 'Rs.800.00', 'tag': '17%off'},
+    {'gems': 66600, 'price': 'Rs.1600.00', 'tag': '30%off'},
+    {'gems': 167400, 'price': 'Rs.4000.00', 'tag': '60%off'},
   ];
 
   void _sendGift(String giftName, int cost) {
     if (userGems >= cost) {
       setState(() {
         userGems -= cost;
-        chatMessages.add('🎁 $currentUserName $giftName பரிசளித்தார்!');
+        chatMessages.add('$currentUserName sent $giftName!');
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFFFF2D75),
-          content: Text('$giftName அனுப்பப்பட்டது! மீதி: $userGems ஜெம்ஸ்'),
+          content: Text('$giftName sent! Balance: $userGems Gems'),
           duration: const Duration(seconds: 1),
         ),
       );
     } else {
-      // ஜெம்ஸ் பத்தவில்லை என்றால் ரீசார்ஜ் சீட் பாப்-அப் ஆகும்
       _showGemsRechargeSheet();
     }
   }
 
-  // நீ கேட்ட ஜெம்ஸ் ரீசார்ஜ் பாப்-அப் வடிவம் (BottomSheet)
   void _showGemsRechargeSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
+      builder: (BuildContext sheetContext) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (BuildContext context, StateSetter setModalState) {
             return Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -442,7 +437,7 @@ class _LiveRoomState extends State<LiveRoomScreen> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.grey, size: 20),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(sheetContext),
                       ),
                     ],
                   ),
@@ -453,7 +448,6 @@ class _LiveRoomState extends State<LiveRoomScreen> {
                   const SizedBox(height: 4),
                   const Text('Call beauties with Gems', style: TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 16),
-                  // 3x2 கட்ட வடிவம் (Grid)
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -464,7 +458,7 @@ class _LiveRoomState extends State<LiveRoomScreen> {
                       mainAxisSpacing: 10,
                       childAspectRatio: 0.88,
                     ),
-                    itemBuilder: (context, index) {
+                    itemBuilder: (BuildContext ctx, int index) {
                       final item = gemsPackages[index];
                       final bool isSelected = selectedGemsIndex == index;
                       return GestureDetector(
@@ -504,7 +498,7 @@ class _LiveRoomState extends State<LiveRoomScreen> {
                                       border: Border.all(color: Colors.black12),
                                     ),
                                     child: Text(
-                                      item['price'],
+                                      '${item['price']}',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
@@ -515,6 +509,13 @@ class _LiveRoomState extends State<LiveRoomScreen> {
                                 ],
                               ),
                             ),
-                            // தள்ளுபடி பேட்ஜ்
                             Positioned(
-                     
+                              top: -6,
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: Colors.pinkAccent.withOpacity(0.85),
+                                    borderRadius: BorderRadius.ci
