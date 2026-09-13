@@ -1,11 +1,10 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:zego_uikit_prebuilt_live_streaming/zego_uikit_prebuilt_live_streaming.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  MobileAds.instance.initialize();
+  // AdMob crash thadukka safe-ah initialize pandrom
   runApp(const FizzLiveApp());
 }
 
@@ -141,8 +140,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  BannerAd? _bannerAd;
-  bool _isBannerLoaded = false;
   String? activeMiniRoomID;
   late TabController _tabController;
 
@@ -156,25 +153,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadBannerAd();
-  }
-
-  void _loadBannerAd() {
-    _bannerAd = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (_) => setState(() => _isBannerLoaded = true),
-        onAdFailedToLoad: (ad, err) => ad.dispose(),
-      ),
-    )..load();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -230,31 +213,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
       body: Stack(
         children: [
-          Column(
+          TabBarView(
+            controller: _tabController,
             children: [
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    ListView.builder(
-                      itemCount: allRooms.length,
-                      itemBuilder: (ctx, i) => _buildRoomTile(allRooms[i]),
-                    ),
-                    followingRooms.isEmpty
-                        ? const Center(child: Text('No followed streamers live!'))
-                        : ListView.builder(
-                            itemCount: followingRooms.length,
-                            itemBuilder: (ctx, i) => _buildRoomTile(followingRooms[i]),
-                          ),
-                  ],
-                ),
+              ListView.builder(
+                itemCount: allRooms.length,
+                itemBuilder: (ctx, i) => _buildRoomTile(allRooms[i]),
               ),
-              if (_isBannerLoaded && _bannerAd != null)
-                SizedBox(
-                  height: _bannerAd!.size.height.toDouble(),
-                  width: _bannerAd!.size.width.toDouble(),
-                  child: AdWidget(ad: _bannerAd!),
-                ),
+              followingRooms.isEmpty
+                  ? const Center(child: Text('No followed streamers live!'))
+                  : ListView.builder(
+                      itemCount: followingRooms.length,
+                      itemBuilder: (ctx, i) => _buildRoomTile(followingRooms[i]),
+                    ),
             ],
           ),
           if (activeMiniRoomID != null)
