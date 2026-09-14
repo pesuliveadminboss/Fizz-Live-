@@ -25,7 +25,7 @@ jobs:
           channel: 'stable'
           cache: false
 
-      - name: Recreate Clean Android V2 Project & SDK 36
+      - name: Recreate Clean Android Project & SDK 36
         run: |
           rm -rf android build .dart_tool
           flutter create . --platforms android --org com.pesulive.fizzlive
@@ -41,7 +41,7 @@ jobs:
             fi
           done
 
-          # 2. Global subproject compileSdk 36 (Fixes BAKLAVA symbol in sqflite)
+          # 2. Subproject global SDK 36 (Fixes BAKLAVA & Zego SDK)
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -73,17 +73,20 @@ jobs:
         run: |
           LOGO_PATH=$(find . -maxdepth 2 -iname "*logo*.png" | head -n 1)
           if [ -n "$LOGO_PATH" ]; then
-            echo "Using custom logo from: $LOGO_PATH"
+            echo "Using custom logo: $LOGO_PATH"
             sudo apt-get update && sudo apt-get install -y imagemagick
+
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$dir
             done
+
             for pair in "mipmap-mdpi 48" "mipmap-hdpi 72" "mipmap-xhdpi 96" "mipmap-xxhdpi 144" "mipmap-xxxhdpi 192"; do
               set -- $pair
               convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
               convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
               convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_foreground.png
             done
+
             mkdir -p android/app/src/main/res/mipmap-anydpi-v26
             cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -92,6 +95,7 @@ jobs:
               <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
           </adaptive-icon>
           EOF
+
             cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
@@ -99,17 +103,27 @@ jobs:
               <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
           </adaptive-icon>
           EOF
-          else
-            echo "No logo file found; preserving default Flutter icons."
           fi
 
-      - name: Build Official Flutter APK
+      - name: Compile Full Release APK via Gradle with Flutter Engine
         run: |
-          flutter build apk --release --no-tree-shake-icons
+          # 1. Compile Flutter Dart AOT Assets first (Crucial: prevents app crash on startup)
+          flutter build bundle
 
-      - name: Export Release APK
+          # 2. Build release APK directly using Gradle with file-watching disabled (prevents "already watching path" crash)
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
+          cd ..
+
+      - name: Locate and Package Release APK
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk Fizz-Live-Release.apk
+          FOUND_APK=$(find android/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
+          if [ -z "$FOUND_APK" ]; then
+            FOUND_APK=$(find . -type f -name "*release*.apk" | head -n 1)
+          fi
+          echo "Discovered Release APK at: $FOUND_APK"
+          cp "$FOUND_APK" Fizz-Live-Release.apk
 
       - name: Publish Direct Public Download Release
         uses: softprops/action-gh-release@v1
