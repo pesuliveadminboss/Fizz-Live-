@@ -25,13 +25,13 @@ jobs:
           channel: 'stable'
           cache: false
 
-      - name: Recreate Clean Android V2 Project & Configure SDK 36
+      - name: Recreate Clean Android Project & Configure SDK 36
         run: |
           rm -rf android build .dart_tool
-          flutter create . --platforms android --org com.pesulive.fizzlive
+          flutter create . --platforms android
           flutter pub get
 
-          # Configure compileSdk 36 & minSdk 24
+          # 1. Update SDKs: compileSdk 36, minSdk 24 & Enable MultiDex
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -45,7 +45,17 @@ jobs:
             fi
           done
 
-          # Global subproject compileSdk 36
+          # Disable R8 / ProGuard shrinking (Prevents ZegoCloud from getting wiped out causing launch crash)
+          if [ -f "android/app/build.gradle" ]; then
+            sed -i '/buildTypes {/,/}/ s/minifyEnabled\s\+true/minifyEnabled false/g' android/app/build.gradle || true
+            sed -i '/buildTypes {/,/}/ s/shrinkResources\s\+true/shrinkResources false/g' android/app/build.gradle || true
+          fi
+          if [ -f "android/app/build.gradle.kts" ]; then
+            sed -i 's/isMinifyEnabled\s*=\s*true/isMinifyEnabled = false/g' android/app/build.gradle.kts || true
+            sed -i 's/isShrinkResources\s*=\s*true/isShrinkResources = false/g' android/app/build.gradle.kts || true
+          fi
+
+          # 2. Global subproject compileSdk 36
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -59,7 +69,7 @@ jobs:
           }
           EOF
 
-          # Live streaming permissions in AndroidManifest.xml
+          # 3. Add Live Stream Permissions & Zego Keep-Alive to AndroidManifest.xml
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
             sed -i '/<manifest/a \
@@ -69,6 +79,7 @@ jobs:
               <uses-permission android:name="android.permission.RECORD_AUDIO" />\
               <uses-permission android:name="android.permission.CAMERA" />\
               <uses-permission android:name="android.permission.BLUETOOTH" />\
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\
               <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\
               <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST" || true
           fi
@@ -80,7 +91,7 @@ jobs:
             echo "Applying original logo from: $LOGO_PATH"
             sudo apt-get update && sudo apt-get install -y imagemagick
 
-            # Delete adaptive XML so Android treats it as standard legacy icon (no auto-zoom crop)
+            # Delete adaptive XML so Android treats it as standard legacy icon
             rm -rf android/app/src/main/res/mipmap-anydpi-v26
 
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
@@ -99,10 +110,10 @@ jobs:
 
       - name: Compile Full Release with Native Dart AOT
         run: |
-          # 1. Build release assets and Dart snapshot
+          # 1. Compile release assets and Dart snapshot
           flutter build bundle
 
-          # 2. Compile Release via Gradle directly (Bypasses Flutter CLI file-watching bug while including full Dart AOT)
+          # 2. Compile Release via Gradle directly with Flutter Dart AOT
           cd android
           chmod +x ./gradlew
           ./gradlew :app:assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
