@@ -31,19 +31,21 @@ jobs:
           flutter create . --platforms android --org com.pesulive.fizzlive
           flutter pub get
 
-          # 1. Update SDK to 36
+          # Configure compileSdk 36 & minSdk 24 (Fixes ReleaseMinSdkCheck)
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
               sed -i 's/targetSdk\s*=\s*flutter.targetSdkVersion/targetSdk = 36/g' "$file" || true
               sed -i 's/compileSdkVersion\s\+flutter.compileSdkVersion/compileSdkVersion 36/g' "$file" || true
               sed -i 's/targetSdkVersion\s\+flutter.targetSdkVersion/targetSdkVersion 36/g' "$file" || true
-              sed -i 's/minSdkVersion\s\+flutter.minSdkVersion/minSdkVersion 21/g' "$file" || true
-              sed -i 's/minSdk\s*=\s*flutter.minSdkVersion/minSdk = 21/g' "$file" || true
+              sed -i 's/minSdkVersion\s\+flutter.minSdkVersion/minSdkVersion 24/g' "$file" || true
+              sed -i 's/minSdk\s*=\s*flutter.minSdkVersion/minSdk = 24/g' "$file" || true
+              sed -i 's/minSdk\s*=\s*21/minSdk = 24/g' "$file" || true
+              sed -i 's/minSdkVersion\s\+21/minSdkVersion 24/g' "$file" || true
             fi
           done
 
-          # 2. Global subproject compileSdk 36 (Fixes BAKLAVA symbol in sqflite)
+          # Global subproject compileSdk 36 (Fixes BAKLAVA symbol in sqflite)
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -57,7 +59,7 @@ jobs:
           }
           EOF
 
-          # 3. Add Live Stream Permissions to AndroidManifest.xml
+          # Live streaming permissions in AndroidManifest.xml
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
             sed -i '/<manifest/a \
@@ -84,10 +86,10 @@ jobs:
 
             for pair in "mipmap-mdpi 48" "mipmap-hdpi 72" "mipmap-xhdpi 96" "mipmap-xxhdpi 144" "mipmap-xxxhdpi 192"; do
               set -- $pair
-              # Pure direct square icon (unmodified aspect)
+              # Pure direct square icon
               convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
               convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
-              # Foreground with slight 72% inner fit inside canvas to match standard Android circle mask perfectly
+              # Foreground with 72% safe zone so Android doesn't crop out 'LIVE'
               convert "$LOGO_PATH" -resize 72%x72% -background black -gravity center -extent 100%x100% -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_foreground.png
             done
 
@@ -122,7 +124,7 @@ jobs:
           # 1. Compile assets and Dart bundle
           flutter build bundle
 
-          # 2. Build release APK directly through Gradle without file-watching conflict
+          # 2. Build release APK directly through Gradle
           cd android
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
