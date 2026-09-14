@@ -25,7 +25,7 @@ jobs:
           channel: 'stable'
           cache: false
 
-      - name: Recreate Clean Android V2 Project & SDK 36
+      - name: Recreate Clean Android Project & Configure SDK 36
         run: |
           rm -rf android build .dart_tool
           flutter create . --platforms android --org com.pesulive.fizzlive
@@ -69,32 +69,47 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST" || true
           fi
 
-      - name: Auto-Inject Correctly Padded Non-Zoomed App Icons
+      - name: Auto-Scale App Logo with Exact Android Safe-Zone
         run: |
           LOGO_PATH=$(find . -maxdepth 2 -iname "*logo*.png" | head -n 1)
           if [ -n "$LOGO_PATH" ]; then
-            echo "Found logo at: $LOGO_PATH. Adding safe-zone padding to prevent zoom cut..."
+            echo "Found logo at: $LOGO_PATH. Scaling to 52% inside black canvas for zero crop..."
             sudo apt-get update && sudo apt-get install -y imagemagick
 
-            # Create a properly padded foreground (scaled to 70% with black background canvas)
-            convert "$LOGO_PATH" -resize 70%x70% -gravity center -background black -extent 100%x100% padded_logo.png
+            # Standard icon (Legacy Android)
+            convert "$LOGO_PATH" -resize 512x512 -background black -gravity center -extent 512x512 legacy_icon.png
+
+            # Adaptive Foreground: Scaled down strictly to 52% inside transparent canvas (Android will never zoom/cut it)
+            convert "$LOGO_PATH" -resize 266x266 -background none -gravity center -extent 512x512 adaptive_fg.png
 
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$dir
             done
 
-            for pair in "mipmap-mdpi 48" "mipmap-hdpi 72" "mipmap-xhdpi 96" "mipmap-xxhdpi 144" "mipmap-xxxhdpi 192"; do
+            for pair in "mipmap-mdpi 48 108" "mipmap-hdpi 72 162" "mipmap-xhdpi 96 216" "mipmap-xxhdpi 144 324" "mipmap-xxxhdpi 192 432"; do
               set -- $pair
-              convert padded_logo.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
-              convert padded_logo.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
-              convert padded_logo.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_foreground.png
+              # Legacy
+              convert legacy_icon.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
+              convert legacy_icon.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
+              # Foreground for Adaptive
+              convert adaptive_fg.png -resize ${3}x${3} android/app/src/main/res/$1/ic_launcher_foreground.png
             done
 
+            # Create black background drawable for adaptive icons
+            mkdir -p android/app/src/main/res/values
+            cat << 'EOF' > android/app/src/main/res/values/ic_launcher_background.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">#000000</color>
+          </resources>
+          EOF
+
+            # Android 8+ Adaptive XML
             mkdir -p android/app/src/main/res/mipmap-anydpi-v26
             cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@android:color/black"/>
+              <background android:drawable="@color/ic_launcher_background"/>
               <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
           </adaptive-icon>
           EOF
@@ -102,20 +117,20 @@ jobs:
             cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@android:color/black"/>
+              <background android:drawable="@color/ic_launcher_background"/>
               <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
           </adaptive-icon>
           EOF
           fi
 
-      - name: Build Flutter Full Release (Dart Engine + APK)
+      - name: Compile Official Dart AOT Release Engine and APK
         run: |
-          # 1. Compile Dart AOT native binaries first
-          flutter build bundle
-
-          # 2. Build release APK with Flutter engine artifacts connected
           cd android
           chmod +x ./gradlew
+          # 1. Compile official Flutter release binaries (AOT libapp.so + libflutter.so)
+          ./gradlew app:compileFlutterBuildRelease --no-daemon -Dorg.gradle.vfs.watch=false
+
+          # 2. Package release APK with native binaries included
           ./gradlew app:assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
           cd ..
 
