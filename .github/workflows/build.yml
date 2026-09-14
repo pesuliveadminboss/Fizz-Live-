@@ -25,13 +25,13 @@ jobs:
           channel: 'stable'
           cache: false
 
-      - name: Recreate Clean Android V2 Project & SDK 36
+      - name: Recreate Clean Android V2 Project & Configure SDK 36
         run: |
           rm -rf android build .dart_tool
           flutter create . --platforms android --org com.pesulive.fizzlive
           flutter pub get
 
-          # 1. Update SDKs: compileSdk 36 and minSdk 24
+          # Configure compileSdk 36 & minSdk 24
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -45,7 +45,7 @@ jobs:
             fi
           done
 
-          # 2. Global subproject compileSdk 36
+          # Global subproject compileSdk 36
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -59,7 +59,7 @@ jobs:
           }
           EOF
 
-          # 3. Add Live Stream Permissions to AndroidManifest.xml
+          # Live streaming permissions in AndroidManifest.xml
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
             sed -i '/<manifest/a \
@@ -77,42 +77,46 @@ jobs:
         run: |
           LOGO_PATH=$(find . -maxdepth 2 -iname "*logo*.png" | head -n 1)
           if [ -n "$LOGO_PATH" ]; then
-            echo "Applying logo from: $LOGO_PATH"
+            echo "Applying original logo from: $LOGO_PATH"
             sudo apt-get update && sudo apt-get install -y imagemagick
 
-            # Remove adaptive vector folders so Android cannot zoom/crop the icon
+            # Delete adaptive XML so Android treats it as standard legacy icon (no auto-zoom crop)
             rm -rf android/app/src/main/res/mipmap-anydpi-v26
 
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$dir
             done
 
-            # Write directly to PNGs matching original 81MB layout
             for pair in "mipmap-mdpi 48" "mipmap-hdpi 72" "mipmap-xhdpi 96" "mipmap-xxhdpi 144" "mipmap-xxxhdpi 192"; do
               set -- $pair
               convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
               convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
             done
 
-            # Explicitly force manifest to bind directly to standard PNG
             sed -i 's/android:icon="@[^"]*"/android:icon="@mipmap\/ic_launcher"/g' android/app/src/main/AndroidManifest.xml || true
             sed -i 's/android:roundIcon="@[^"]*"/android:roundIcon="@mipmap\/ic_launcher_round"/g' android/app/src/main/AndroidManifest.xml || true
           fi
 
-      - name: Build Authentic Flutter Release APK
+      - name: Compile Full Release with Native Dart AOT
         run: |
-          # Disable daemon and file watching to prevent watcher lock exception
-          export GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false"
-          flutter build apk --release --no-tree-shake-icons --target-platform android-arm,android-arm64
+          # 1. Build release assets and Dart snapshot
+          flutter build bundle
+
+          # 2. Compile Release via Gradle directly (Bypasses Flutter CLI file-watching bug while including full Dart AOT)
+          cd android
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
+          cd ..
 
       - name: Locate and Package Release APK
         run: |
-          FOUND_APK=$(find build/app/outputs/flutter-apk -type f -name "*release*.apk" | head -n 1)
+          FOUND_APK=$(find . -type f -name "*release*.apk" | grep -v "unaligned" | head -n 1)
           if [ -z "$FOUND_APK" ]; then
-            FOUND_APK=$(find android/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
+            FOUND_APK=$(find . -type f -name "*.apk" | head -n 1)
           fi
-          echo "Discovered Official Release APK at: $FOUND_APK"
+          echo "Found compiled release APK at: $FOUND_APK"
           cp "$FOUND_APK" Fizz-Live-Release.apk
+          ls -lh Fizz-Live-Release.apk
 
       - name: Publish Direct Public Download Release
         uses: softprops/action-gh-release@v1
