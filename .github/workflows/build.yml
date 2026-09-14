@@ -25,13 +25,13 @@ jobs:
           channel: 'stable'
           cache: false
 
-      - name: Recreate Clean Android Project & SDK 36
+      - name: Recreate Clean Android V2 Project & SDK 36
         run: |
           rm -rf android build .dart_tool
           flutter create . --platforms android --org com.pesulive.fizzlive
           flutter pub get
 
-          # 1. Update SDK to 36
+          # 1. SDK 36 Alignment
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -41,7 +41,7 @@ jobs:
             fi
           done
 
-          # 2. Subproject global SDK 36 (Fixes BAKLAVA & Zego SDK)
+          # 2. Subproject global SDK 36
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -69,12 +69,15 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST" || true
           fi
 
-      - name: Setup Launcher Icons
+      - name: Auto-Inject Correctly Padded Non-Zoomed App Icons
         run: |
           LOGO_PATH=$(find . -maxdepth 2 -iname "*logo*.png" | head -n 1)
           if [ -n "$LOGO_PATH" ]; then
-            echo "Using custom logo: $LOGO_PATH"
+            echo "Found logo at: $LOGO_PATH. Adding safe-zone padding to prevent zoom cut..."
             sudo apt-get update && sudo apt-get install -y imagemagick
+
+            # Create a properly padded foreground (scaled to 70% with black background canvas)
+            convert "$LOGO_PATH" -resize 70%x70% -gravity center -background black -extent 100%x100% padded_logo.png
 
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$dir
@@ -82,9 +85,9 @@ jobs:
 
             for pair in "mipmap-mdpi 48" "mipmap-hdpi 72" "mipmap-xhdpi 96" "mipmap-xxhdpi 144" "mipmap-xxxhdpi 192"; do
               set -- $pair
-              convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
-              convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
-              convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_foreground.png
+              convert padded_logo.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
+              convert padded_logo.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
+              convert padded_logo.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_foreground.png
             done
 
             mkdir -p android/app/src/main/res/mipmap-anydpi-v26
@@ -105,18 +108,18 @@ jobs:
           EOF
           fi
 
-      - name: Compile Full Release APK via Gradle with Flutter Engine
+      - name: Build Flutter Full Release (Dart Engine + APK)
         run: |
-          # 1. Compile Flutter Dart AOT Assets first (Crucial: prevents app crash on startup)
+          # 1. Compile Dart AOT native binaries first
           flutter build bundle
 
-          # 2. Build release APK directly using Gradle with file-watching disabled (prevents "already watching path" crash)
+          # 2. Build release APK with Flutter engine artifacts connected
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
+          ./gradlew app:assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
           cd ..
 
-      - name: Locate and Package Release APK
+      - name: Locate and Export Release APK
         run: |
           FOUND_APK=$(find android/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
           if [ -z "$FOUND_APK" ]; then
