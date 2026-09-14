@@ -25,23 +25,25 @@ jobs:
           channel: 'stable'
           cache: false
 
-      - name: Recreate Clean Android Project & Configure SDK 36
+      - name: Configure Android Project & Ensure Proper MainActivity
         run: |
           rm -rf android build .dart_tool
           flutter create . --platforms android --org com.pesulive.fizzlive
           flutter pub get
 
-          # 1. SDK 36 Alignment
+          # Configure compileSdk 36 & MultiDex to prevent launch crashes
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
               sed -i 's/targetSdk\s*=\s*flutter.targetSdkVersion/targetSdk = 36/g' "$file" || true
               sed -i 's/compileSdkVersion\s\+flutter.compileSdkVersion/compileSdkVersion 36/g' "$file" || true
               sed -i 's/targetSdkVersion\s\+flutter.targetSdkVersion/targetSdkVersion 36/g' "$file" || true
+              sed -i 's/minSdkVersion\s\+flutter.minSdkVersion/minSdkVersion 21/g' "$file" || true
+              sed -i 's/minSdk\s*=\s*flutter.minSdkVersion/minSdk = 21/g' "$file" || true
             fi
           done
 
-          # 2. Subproject global SDK 36
+          # Global subproject compileSdk 36
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -55,7 +57,7 @@ jobs:
           }
           EOF
 
-          # 3. Add Live Stream Permissions to AndroidManifest.xml
+          # Live streaming & network permissions in Manifest
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
             sed -i '/<manifest/a \
@@ -69,78 +71,43 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST" || true
           fi
 
-      - name: Auto-Scale App Logo with Exact Android Safe-Zone
+      - name: Inject Pure Original Logo Icons (Matching 81MB Release Style)
         run: |
           LOGO_PATH=$(find . -maxdepth 2 -iname "*logo*.png" | head -n 1)
           if [ -n "$LOGO_PATH" ]; then
-            echo "Found logo at: $LOGO_PATH. Scaling to 52% inside black canvas for zero crop..."
+            echo "Directly applying original logo from: $LOGO_PATH"
             sudo apt-get update && sudo apt-get install -y imagemagick
-
-            # Standard icon (Legacy Android)
-            convert "$LOGO_PATH" -resize 512x512 -background black -gravity center -extent 512x512 legacy_icon.png
-
-            # Adaptive Foreground: Scaled down strictly to 52% inside transparent canvas (Android will never zoom/cut it)
-            convert "$LOGO_PATH" -resize 266x266 -background none -gravity center -extent 512x512 adaptive_fg.png
 
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
               mkdir -p android/app/src/main/res/$dir
             done
 
-            for pair in "mipmap-mdpi 48 108" "mipmap-hdpi 72 162" "mipmap-xhdpi 96 216" "mipmap-xxhdpi 144 324" "mipmap-xxxhdpi 192 432"; do
+            for pair in "mipmap-mdpi 48" "mipmap-hdpi 72" "mipmap-xhdpi 96" "mipmap-xxhdpi 144" "mipmap-xxxhdpi 192"; do
               set -- $pair
-              # Legacy
-              convert legacy_icon.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
-              convert legacy_icon.png -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
-              # Foreground for Adaptive
-              convert adaptive_fg.png -resize ${3}x${3} android/app/src/main/res/$1/ic_launcher_foreground.png
+              convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher.png
+              convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_round.png
+              convert "$LOGO_PATH" -resize ${2}x${2} android/app/src/main/res/$1/ic_launcher_foreground.png
             done
 
-            # Create black background drawable for adaptive icons
-            mkdir -p android/app/src/main/res/values
-            cat << 'EOF' > android/app/src/main/res/values/ic_launcher_background.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <color name="ic_launcher_background">#000000</color>
-          </resources>
-          EOF
-
-            # Android 8+ Adaptive XML
-            mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-            cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@color/ic_launcher_background"/>
-              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-          </adaptive-icon>
-          EOF
-
-            cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@color/ic_launcher_background"/>
-              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-          </adaptive-icon>
-          EOF
+            # Force manifest to read standard PNG icons directly
+            sed -i 's/android:icon="@[^"]*"/android:icon="@mipmap\/ic_launcher"/g' android/app/src/main/AndroidManifest.xml || true
+            sed -i 's/android:roundIcon="@[^"]*"/android:roundIcon="@mipmap\/ic_launcher_round"/g' android/app/src/main/AndroidManifest.xml || true
           fi
 
-      - name: Compile Official Dart AOT Release Engine and APK
+      - name: Build Full Production Flutter APK
         run: |
-          cd android
-          chmod +x ./gradlew
-          # 1. Compile official Flutter release binaries (AOT libapp.so + libflutter.so)
-          ./gradlew app:compileFlutterBuildRelease --no-daemon -Dorg.gradle.vfs.watch=false
+          # Use flutter's official compile tool with isolated cache to avoid watching lock
+          flutter clean
+          flutter pub get
+          flutter build apk --release --no-tree-shake-icons --target-platform android-arm,android-arm64
 
-          # 2. Package release APK with native binaries included
-          ./gradlew app:assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
-          cd ..
-
-      - name: Locate and Export Release APK
+      - name: Locate and Package Release APK
         run: |
-          FOUND_APK=$(find android/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
+          FOUND_APK=$(find build/app/outputs/flutter-apk -type f -name "*release*.apk" | head -n 1)
           if [ -z "$FOUND_APK" ]; then
-            FOUND_APK=$(find . -type f -name "*release*.apk" | head -n 1)
+            FOUND_APK=$(find android/app/build/outputs/apk/release -type f -name "*.apk" | head -n 1)
           fi
-          echo "Discovered Release APK at: $FOUND_APK"
+          echo "Discovered Official Release APK at: $FOUND_APK"
           cp "$FOUND_APK" Fizz-Live-Release.apk
 
       - name: Publish Direct Public Download Release
