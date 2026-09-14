@@ -31,7 +31,7 @@ jobs:
           flutter create . --platforms android
           flutter pub get
 
-          # 1. Update SDKs: compileSdk 36, minSdk 24 & Enable MultiDex
+          # 1. Update SDKs: compileSdk 36, minSdk 24 & MultiDex
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -45,7 +45,7 @@ jobs:
             fi
           done
 
-          # Disable R8 / ProGuard shrinking (Prevents ZegoCloud from getting wiped out causing launch crash)
+          # Disable R8 shrinking so Zego classes are retained completely
           if [ -f "android/app/build.gradle" ]; then
             sed -i '/buildTypes {/,/}/ s/minifyEnabled\s\+true/minifyEnabled false/g' android/app/build.gradle || true
             sed -i '/buildTypes {/,/}/ s/shrinkResources\s\+true/shrinkResources false/g' android/app/build.gradle || true
@@ -69,7 +69,7 @@ jobs:
           }
           EOF
 
-          # 3. Add Live Stream Permissions & Zego Keep-Alive to AndroidManifest.xml
+          # 3. Add Live Stream Permissions to AndroidManifest.xml
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
             sed -i '/<manifest/a \
@@ -84,14 +84,12 @@ jobs:
               <uses-permission android:name="android.permission.WAKE_LOCK" />' "$MANIFEST" || true
           fi
 
-      - name: Apply Pure Original Uncropped Logo (81MB Style)
+      - name: Apply Pure Original Uncropped Logo
         run: |
           LOGO_PATH=$(find . -maxdepth 2 -iname "*logo*.png" | head -n 1)
           if [ -n "$LOGO_PATH" ]; then
-            echo "Applying original logo from: $LOGO_PATH"
             sudo apt-get update && sudo apt-get install -y imagemagick
 
-            # Delete adaptive XML so Android treats it as standard legacy icon
             rm -rf android/app/src/main/res/mipmap-anydpi-v26
 
             for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
@@ -108,12 +106,13 @@ jobs:
             sed -i 's/android:roundIcon="@[^"]*"/android:roundIcon="@mipmap\/ic_launcher_round"/g' android/app/src/main/AndroidManifest.xml || true
           fi
 
-      - name: Compile Full Release with Native Dart AOT
+      - name: Compile Native Dart AOT and Full Release APK
         run: |
-          # 1. Compile release assets and Dart snapshot
+          # 1. Compile official Dart AOT native binaries for 32-bit and 64-bit ARM
+          flutter build aot --release --target-platform android-arm,android-arm64
           flutter build bundle
 
-          # 2. Compile Release via Gradle directly with Flutter Dart AOT
+          # 2. Compile APK with complete Dart AOT binaries included
           cd android
           chmod +x ./gradlew
           ./gradlew :app:assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
