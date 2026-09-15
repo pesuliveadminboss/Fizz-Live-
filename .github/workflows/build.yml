@@ -25,10 +25,11 @@ jobs:
           channel: 'stable'
           cache: false
 
-      - name: Recreate Clean Android Project & Configure SDK 36
+      - name: Recreate Clean Android Project & Configure Exact Package
         run: |
           rm -rf android build .dart_tool
-          flutter create . --platforms android
+          # Force exact package name matching APKPure app id
+          flutter create . --platforms android --org com.fizzlive --project-name fizz_live
           flutter pub get
 
           # 1. Update SDKs: compileSdk 36, minSdk 24
@@ -40,12 +41,10 @@ jobs:
               sed -i 's/targetSdkVersion\s\+flutter.targetSdkVersion/targetSdkVersion 36/g' "$file" || true
               sed -i 's/minSdkVersion\s\+flutter.minSdkVersion/minSdkVersion 24/g' "$file" || true
               sed -i 's/minSdk\s*=\s*flutter.minSdkVersion/minSdk = 24/g' "$file" || true
-              sed -i 's/minSdk\s*=\s*21/minSdk = 24/g' "$file" || true
-              sed -i 's/minSdkVersion\s\+21/minSdkVersion 24/g' "$file" || true
             fi
           done
 
-          # Disable R8 shrinking so Zego classes are not removed
+          # Disable R8 shrinking so Zego classes are preserved completely
           if [ -f "android/app/build.gradle" ]; then
             sed -i '/buildTypes {/,/}/ s/minifyEnabled\s\+true/minifyEnabled false/g' android/app/build.gradle || true
             sed -i '/buildTypes {/,/}/ s/shrinkResources\s\+true/shrinkResources false/g' android/app/build.gradle || true
@@ -106,28 +105,20 @@ jobs:
             sed -i 's/android:roundIcon="@[^"]*"/android:roundIcon="@mipmap\/ic_launcher_round"/g' android/app/src/main/AndroidManifest.xml || true
           fi
 
-      - name: Compile Full Release APK with Injected Dart Engine
+      - name: Compile Official Flutter Release APK
         run: |
-          flutter build bundle
-
-          cd android
-          chmod +x ./gradlew
-          # Pass Flutter build properties directly to Gradle so libapp.so & Dart AOT compile properly
-          ./gradlew assembleRelease \
-            -Ptarget-platform=android-arm,android-arm64 \
-            -Ptarget=lib/main.dart \
-            --no-daemon \
-            -Dorg.gradle.vfs.watch=false \
-            -Dorg.gradle.parallel=false
-          cd ..
+          # Clean build directly via Flutter CLI to ensure all Dart AOT binaries (libapp.so) are properly injected
+          flutter clean
+          flutter pub get
+          flutter build apk --release --no-tree-shake-icons
 
       - name: Locate and Package Release APK
         run: |
-          FOUND_APK=$(find . -type f -name "*release*.apk" | grep -v "unaligned" | head -n 1)
+          FOUND_APK=$(find build/app/outputs/flutter-apk -type f -name "*release*.apk" | head -n 1)
           if [ -z "$FOUND_APK" ]; then
-            FOUND_APK=$(find . -type f -name "*.apk" | head -n 1)
+            FOUND_APK=$(find . -type f -name "*release*.apk" | grep -v "unaligned" | head -n 1)
           fi
-          echo "Found compiled release APK at: $FOUND_APK"
+          echo "Discovered Official Release APK at: $FOUND_APK"
           cp "$FOUND_APK" Fizz-Live-Release.apk
           ls -lh Fizz-Live-Release.apk
 
