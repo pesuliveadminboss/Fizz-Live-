@@ -31,7 +31,7 @@ jobs:
           flutter create . --platforms android
           flutter pub get
 
-          # 1. Update SDKs: compileSdk 36, minSdk 24 & MultiDex
+          # 1. Update SDKs: compileSdk 36, minSdk 24
           for file in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$file" ]; then
               sed -i 's/compileSdk\s*=\s*flutter.compileSdkVersion/compileSdk = 36/g' "$file" || true
@@ -45,7 +45,7 @@ jobs:
             fi
           done
 
-          # Disable R8 shrinking so Zego classes are retained completely
+          # Disable R8 shrinking so Zego classes are not removed
           if [ -f "android/app/build.gradle" ]; then
             sed -i '/buildTypes {/,/}/ s/minifyEnabled\s\+true/minifyEnabled false/g' android/app/build.gradle || true
             sed -i '/buildTypes {/,/}/ s/shrinkResources\s\+true/shrinkResources false/g' android/app/build.gradle || true
@@ -106,16 +106,19 @@ jobs:
             sed -i 's/android:roundIcon="@[^"]*"/android:roundIcon="@mipmap\/ic_launcher_round"/g' android/app/src/main/AndroidManifest.xml || true
           fi
 
-      - name: Compile Native Dart AOT and Full Release APK
+      - name: Compile Full Release APK with Injected Dart Engine
         run: |
-          # 1. Compile official Dart AOT native binaries for 32-bit and 64-bit ARM
-          flutter build aot --release --target-platform android-arm,android-arm64
           flutter build bundle
 
-          # 2. Compile APK with complete Dart AOT binaries included
           cd android
           chmod +x ./gradlew
-          ./gradlew :app:assembleRelease --no-daemon -Dorg.gradle.vfs.watch=false -Dorg.gradle.parallel=false
+          # Pass Flutter build properties directly to Gradle so libapp.so & Dart AOT compile properly
+          ./gradlew assembleRelease \
+            -Ptarget-platform=android-arm,android-arm64 \
+            -Ptarget=lib/main.dart \
+            --no-daemon \
+            -Dorg.gradle.vfs.watch=false \
+            -Dorg.gradle.parallel=false
           cd ..
 
       - name: Locate and Package Release APK
